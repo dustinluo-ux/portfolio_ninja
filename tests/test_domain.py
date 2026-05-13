@@ -112,6 +112,43 @@ def test_domain_universe_validate_invalid_run_mode_raises_value_error() -> None:
         u.validate()
 
 
+def test_domain_universe_validate_zero_window_days_raises_value_error() -> None:
+    u = Universe(
+        tickers=["AAPL"],
+        run_mode="backtest",
+        window_days=0,
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="window_days"):
+        u.validate()
+
+
+def test_domain_universe_validate_empty_params_hash_raises_value_error() -> None:
+    u = Universe(
+        tickers=["AAPL"],
+        run_mode="backtest",
+        window_days=730,
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        u.validate()
+
+
+def test_domain_universe_validate_invalid_status_raises_value_error() -> None:
+    u = Universe(
+        tickers=["AAPL"],
+        run_mode="backtest",
+        window_days=730,
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        u.validate()
+
+
 # ---------------------------------------------------------------------------
 # MarketDataset tests
 # ---------------------------------------------------------------------------
@@ -137,6 +174,40 @@ def test_domain_market_dataset_validate_empty_source_data_version_raises_value_e
         ds.validate()
 
 
+def test_domain_market_dataset_validate_empty_data_raises_value_error() -> None:
+    ds = MarketDataset(
+        data={},
+        source_data_version="stub-v1",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="data"):
+        ds.validate()
+
+
+def test_domain_market_dataset_validate_empty_params_hash_raises_value_error() -> None:
+    ds = MarketDataset(
+        data={"AAPL": _valid_ticker_data()},
+        source_data_version="stub-v1",
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        ds.validate()
+
+
+def test_domain_market_dataset_validate_invalid_status_raises_value_error() -> None:
+    ds = MarketDataset(
+        data={"AAPL": _valid_ticker_data()},
+        source_data_version="stub-v1",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        ds.validate()
+
+
 # ---------------------------------------------------------------------------
 # MarketState tests
 # ---------------------------------------------------------------------------
@@ -157,6 +228,37 @@ def test_domain_market_state_validate_rsi_out_of_range_raises_value_error() -> N
         params_hash=TEST_HASH,
     )
     with pytest.raises(ValueError, match="rsi_14"):
+        ms.validate()
+
+
+def test_domain_market_state_validate_empty_features_raises_value_error() -> None:
+    ms = MarketState(
+        features={},
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="features"):
+        ms.validate()
+
+
+def test_domain_market_state_validate_empty_params_hash_raises_value_error() -> None:
+    ms = MarketState(
+        features={"AAPL": _valid_ticker_features()},
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        ms.validate()
+
+
+def test_domain_market_state_validate_invalid_status_raises_value_error() -> None:
+    ms = MarketState(
+        features={"AAPL": _valid_ticker_features()},
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
         ms.validate()
 
 
@@ -185,6 +287,51 @@ def test_domain_experiment_params_validate_top_n_zero_raises_value_error() -> No
         ep.validate()
 
 
+def test_domain_experiment_params_validate_empty_model_id_raises_value_error() -> None:
+    ep = ExperimentParams(
+        scoring_model_id="",
+        top_n=5,
+        rebalance_freq="weekly",
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="scoring_model_id"):
+        ep.validate()
+
+
+def test_domain_experiment_params_validate_invalid_rebalance_freq_raises_value_error() -> None:
+    ep = ExperimentParams(
+        scoring_model_id="model-v1",
+        top_n=5,
+        rebalance_freq="yearly",
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="rebalance_freq"):
+        ep.validate()
+
+
+def test_domain_experiment_params_validate_empty_params_hash_raises_value_error() -> None:
+    ep = ExperimentParams(
+        scoring_model_id="model-v1",
+        top_n=5,
+        rebalance_freq="weekly",
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        ep.validate()
+
+
+def test_domain_experiment_params_validate_invalid_status_raises_value_error() -> None:
+    ep = ExperimentParams(
+        scoring_model_id="model-v1",
+        top_n=5,
+        rebalance_freq="weekly",
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        ep.validate()
+
+
 # ---------------------------------------------------------------------------
 # ScoreSet tests
 # ---------------------------------------------------------------------------
@@ -210,6 +357,51 @@ def test_domain_score_set_validate_score_out_of_range_raises_value_error() -> No
         ss.validate()
 
 
+def test_domain_score_set_validate_empty_scores_raises_value_error() -> None:
+    ss = ScoreSet(
+        scores={},
+        model_id="model-v1",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="scores"):
+        ss.validate()
+
+
+def test_domain_score_set_validate_empty_model_id_raises_value_error() -> None:
+    ss = ScoreSet(
+        scores={"AAPL": Decimal("0.8")},
+        model_id="",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="model_id"):
+        ss.validate()
+
+
+def test_domain_score_set_validate_empty_params_hash_raises_value_error() -> None:
+    ss = ScoreSet(
+        scores={"AAPL": Decimal("0.8")},
+        model_id="model-v1",
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        ss.validate()
+
+
+def test_domain_score_set_validate_invalid_status_raises_value_error() -> None:
+    ss = ScoreSet(
+        scores={"AAPL": Decimal("0.8")},
+        model_id="model-v1",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        ss.validate()
+
+
 # ---------------------------------------------------------------------------
 # RankedUniverse tests
 # ---------------------------------------------------------------------------
@@ -221,6 +413,37 @@ def test_domain_ranked_universe_validate_valid_state_passes() -> None:
         params_hash=TEST_HASH,
     )
     ru.validate()  # must not raise
+
+
+def test_domain_ranked_universe_validate_empty_ranked_raises_value_error() -> None:
+    ru = RankedUniverse(
+        ranked=[],
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="ranked"):
+        ru.validate()
+
+
+def test_domain_ranked_universe_validate_empty_params_hash_raises_value_error() -> None:
+    ru = RankedUniverse(
+        ranked=[("AAPL", Decimal("0.9"))],
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        ru.validate()
+
+
+def test_domain_ranked_universe_validate_invalid_status_raises_value_error() -> None:
+    ru = RankedUniverse(
+        ranked=[("AAPL", Decimal("0.9"))],
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        ru.validate()
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +469,37 @@ def test_domain_target_portfolio_validate_weights_not_sum_to_one_raises_value_er
         tp.validate()
 
 
+def test_domain_target_portfolio_validate_empty_weights_raises_value_error() -> None:
+    tp = TargetPortfolio(
+        weights={},
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="weights"):
+        tp.validate()
+
+
+def test_domain_target_portfolio_validate_empty_params_hash_raises_value_error() -> None:
+    tp = TargetPortfolio(
+        weights={"AAPL": Decimal("1.0")},
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        tp.validate()
+
+
+def test_domain_target_portfolio_validate_invalid_status_raises_value_error() -> None:
+    tp = TargetPortfolio(
+        weights={"AAPL": Decimal("1.0")},
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        tp.validate()
+
+
 # ---------------------------------------------------------------------------
 # RiskDecision tests
 # ---------------------------------------------------------------------------
@@ -259,6 +513,43 @@ def test_domain_risk_decision_validate_valid_state_passes() -> None:
         params_hash=TEST_HASH,
     )
     rd.validate()  # must not raise
+
+
+def test_domain_risk_decision_validate_empty_params_hash_raises_value_error() -> None:
+    rd = RiskDecision(
+        approved=True,
+        weights={"AAPL": Decimal("0.6"), "MSFT": Decimal("0.4")},
+        adjustments=[],
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        rd.validate()
+
+
+def test_domain_risk_decision_validate_weights_not_sum_to_one_raises_value_error() -> None:
+    rd = RiskDecision(
+        approved=False,
+        weights={"AAPL": Decimal("0.3"), "MSFT": Decimal("0.2")},
+        adjustments=[],
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="sum"):
+        rd.validate()
+
+
+def test_domain_risk_decision_validate_invalid_status_raises_value_error() -> None:
+    rd = RiskDecision(
+        approved=True,
+        weights={"AAPL": Decimal("0.6"), "MSFT": Decimal("0.4")},
+        adjustments=[],
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        rd.validate()
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +568,59 @@ def test_domain_execution_intent_validate_valid_state_passes() -> None:
     ei.validate()  # must not raise
 
 
+def test_domain_execution_intent_validate_empty_adapter_id_raises_value_error() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("10"))
+    ei = ExecutionIntent(
+        orders=[order],
+        adapter_id="",
+        run_mode="backtest",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="adapter_id"):
+        ei.validate()
+
+
+def test_domain_execution_intent_validate_invalid_run_mode_raises_value_error() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("10"))
+    ei = ExecutionIntent(
+        orders=[order],
+        adapter_id="stub",
+        run_mode="invalid",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="run_mode"):
+        ei.validate()
+
+
+def test_domain_execution_intent_validate_empty_params_hash_raises_value_error() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("10"))
+    ei = ExecutionIntent(
+        orders=[order],
+        adapter_id="stub",
+        run_mode="backtest",
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        ei.validate()
+
+
+def test_domain_execution_intent_validate_invalid_status_raises_value_error() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("10"))
+    ei = ExecutionIntent(
+        orders=[order],
+        adapter_id="stub",
+        run_mode="backtest",
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        ei.validate()
+
+
 # ---------------------------------------------------------------------------
 # EvaluationReport tests
 # ---------------------------------------------------------------------------
@@ -291,6 +635,46 @@ def test_domain_evaluation_report_validate_valid_state_passes() -> None:
         params_hash=TEST_HASH,
     )
     er.validate()  # must not raise
+
+
+def test_domain_evaluation_report_validate_empty_cycle_id_raises_value_error() -> None:
+    er = EvaluationReport(
+        cycle_id="",
+        pnl=Decimal("1500.00"),
+        sharpe=Decimal("1.25"),
+        max_drawdown=Decimal("-0.08"),
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+    )
+    with pytest.raises(ValueError, match="cycle_id"):
+        er.validate()
+
+
+def test_domain_evaluation_report_validate_empty_params_hash_raises_value_error() -> None:
+    er = EvaluationReport(
+        cycle_id="cycle-001",
+        pnl=Decimal("1500.00"),
+        sharpe=Decimal("1.25"),
+        max_drawdown=Decimal("-0.08"),
+        as_of_date=TODAY,
+        params_hash="",
+    )
+    with pytest.raises(ValueError, match="params_hash"):
+        er.validate()
+
+
+def test_domain_evaluation_report_validate_invalid_status_raises_value_error() -> None:
+    er = EvaluationReport(
+        cycle_id="cycle-001",
+        pnl=Decimal("1500.00"),
+        sharpe=Decimal("1.25"),
+        max_drawdown=Decimal("-0.08"),
+        as_of_date=TODAY,
+        params_hash=TEST_HASH,
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
+        er.validate()
 
 
 # ---------------------------------------------------------------------------
@@ -319,6 +703,57 @@ def test_domain_audit_record_validate_missing_pipeline_hash_raises_value_error()
         completed_at=datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
     )
     with pytest.raises(AuditIncompleteError, match="universe"):
+        ar.validate()
+
+
+def test_domain_audit_record_validate_empty_pipeline_hash_value_raises_error() -> None:
+    hashes = _all_pipeline_hashes()
+    hashes["universe"] = ""
+    ar = AuditRecord(
+        cycle_id="cycle-001",
+        run_mode="backtest",
+        tickers=["AAPL"],
+        pipeline_hashes=hashes,
+        completed_at=datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+    )
+    with pytest.raises(AuditIncompleteError, match="empty"):
+        ar.validate()
+
+
+def test_domain_audit_record_validate_empty_cycle_id_raises_value_error() -> None:
+    ar = AuditRecord(
+        cycle_id="",
+        run_mode="backtest",
+        tickers=["AAPL"],
+        pipeline_hashes=_all_pipeline_hashes(),
+        completed_at=datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="cycle_id"):
+        ar.validate()
+
+
+def test_domain_audit_record_validate_invalid_run_mode_raises_value_error() -> None:
+    ar = AuditRecord(
+        cycle_id="cycle-001",
+        run_mode="invalid",
+        tickers=["AAPL"],
+        pipeline_hashes=_all_pipeline_hashes(),
+        completed_at=datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="run_mode"):
+        ar.validate()
+
+
+def test_domain_audit_record_validate_invalid_status_raises_value_error() -> None:
+    ar = AuditRecord(
+        cycle_id="cycle-001",
+        run_mode="backtest",
+        tickers=["AAPL"],
+        pipeline_hashes=_all_pipeline_hashes(),
+        completed_at=datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+        validation_status="unknown",
+    )
+    with pytest.raises(ValueError, match="validation_status"):
         ar.validate()
 
 
@@ -367,6 +802,31 @@ def test_domain_ohlcv_bar_high_gte_low_invariant() -> None:
         bar.validate()
 
 
+def test_domain_ohlcv_bar_negative_volume_raises_value_error() -> None:
+    bar = OHLCVBar(
+        date=TODAY,
+        open=Decimal("100.00"),
+        high=Decimal("105.00"),
+        low=Decimal("99.00"),
+        close=Decimal("100.00"),
+        volume=-1,
+    )
+    with pytest.raises(ValueError, match="volume"):
+        bar.validate()
+
+
+def test_domain_ohlcv_bar_validate_valid_state_passes() -> None:
+    bar = OHLCVBar(
+        date=TODAY,
+        open=Decimal("100.00"),
+        high=Decimal("105.00"),
+        low=Decimal("99.00"),
+        close=Decimal("100.00"),
+        volume=100_000,
+    )
+    bar.validate()  # must not raise
+
+
 # ---------------------------------------------------------------------------
 # Order direction test
 # ---------------------------------------------------------------------------
@@ -375,3 +835,20 @@ def test_domain_order_direction_must_be_buy_or_sell() -> None:
     order = Order(ticker="AAPL", direction="hold", quantity=Decimal("10"))
     with pytest.raises(ValueError, match="direction"):
         order.validate()
+
+
+def test_domain_order_order_type_must_be_market() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("10"), order_type="limit")
+    with pytest.raises(ValueError, match="order_type"):
+        order.validate()
+
+
+def test_domain_order_quantity_must_be_positive() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("0"))
+    with pytest.raises(ValueError, match="quantity"):
+        order.validate()
+
+
+def test_domain_order_validate_valid_state_passes() -> None:
+    order = Order(ticker="AAPL", direction="buy", quantity=Decimal("10"), order_type="market")
+    order.validate()  # must not raise

@@ -16,11 +16,11 @@
 
 ## Active Task
 
-**Current Goal:** MVP Stage 2-7 complete — integrator PASS — git push.
+**Current Goal:** MVP verification COMPLETE — e2e demo proven, coverage 97.05%, ready for Phase V.
 
-**Status:** COMPLETE — all 12 contracts implemented, 90.16% test coverage, integrator PASS, 91 files pushed to origin/master.
+**Status:** MVP VERIFIED — All 11 modules wired, data flows through all interfaces, e2e demo runs successfully. Hook fix applied (PostToolUse:Edit). Test suite expanded to 97.05% coverage. Legacy mining artifacts (5 files) generated for Phase V reference.
 
-**Next Step:** Phase IV — Existing repo mining. Per user constraint, inspect existing repo to identify patterns and design decisions for future enhancements.
+**Next Step:** Phase V — Real data integration (wire StubDataAdapter → IBKRLiveProvider / CSV resilience layer; see LEGACY_MIGRATION_PLAN.md for per-module porting order).
 
 ---
 
@@ -34,6 +34,7 @@
 - Stage 5: Builder implemented all modules — domain objects, 11 pipeline modules, orchestrator, operator_report, 14 test files
 - Stage 6: Reviewer PASS — spec-reviewer and code-reviewer both PASS; float fix (variance.sqrt()); coverage 90.16%
 - Stage 7: Integrator PASS — this sweep
+- **Session 2 (Current):** MVP verification: hook fix (PostToolUse:Edit), test expansion (97.05% coverage), e2e demo created and verified
 
 ### Key Decisions Made
 | Decision | Rationale |
@@ -70,3 +71,13 @@ None.
 None.
 
 ### Auto-snapshot: 2026-05-13T19:22:23+08:00
+
+### Auto-snapshot: 2026-05-13T19:54:42+08:00
+
+### Auto-snapshot: 2026-05-13T20:16:29+08:00
+
+### Auto-snapshot: 2026-05-13T20:31:52+08:00
+
+### Auto-snapshot: 2026-05-13T21:07:12+08:00
+
+### Auto-snapshot: 2026-05-13T22:10:12+08:00

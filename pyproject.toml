@@ -1,0 +1,37 @@
+[project]
+name = "portfolio-ninja"
+version = "0.1.0"
+description = "Automated stock-selection and portfolio-decision system — single-process, deterministic Python pipeline"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4.0",        # linting + formatting
+]
+heavy = [
+    "anthropic>=0.40.0",  # managed_builder.py
+    "watchdog>=4.0",      # auto_watcher.py filesystem events
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src --cov-report=term-missing --cov-fail-under=80"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "C:/Users/dusro/OneDrive/Programming/portfolio_ninja"],
+      "description": "Scoped to this project root only. Cannot write back to factory."
+    }
+  }
+}

@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run tests with coverage gate
+        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Zero-float check (no float() near monetary fields)
+        run: |
+          if grep -rn "float(" src/ | grep -iE "(price|amount|cost|value|fee|rate|balance|weight|return)" 2>/dev/null; then
+            echo "FAIL: float() found near monetary field. Use decimal.Decimal."
+            exit 1
+          fi
+          echo "Zero-float check: PASS"
+
+      - name: Atomic write check
+        run: |
+          VIOLATIONS=$(grep -rn "open(" src/ | grep "'w'" | grep -v "\.tmp" 2>/dev/null || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "FAIL: Direct file write without .tmp pattern:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "Atomic write check: PASS"
+
+      - name: No hardcoded secrets
+        run: |
+          if grep -rn -E "(api_key|password|secret)\s*=\s*['\"][^'\"]{8,}" src/ 2>/dev/null; then
+            echo "FAIL: Hardcoded secret detected."
+            exit 1
+          fi
+          echo "Secrets check: PASS"
+
+      - name: No generic dict cross-module handoffs
+        run: |
+          if grep -rn "-> dict\b\|-> Dict\b" src/ 2>/dev/null | grep -v "test_\|#"; then
+            echo "WARN: function returning generic dict found — verify it is not a cross-module handoff."
+          fi
+          echo "Dict check: done"

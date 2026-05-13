@@ -1,0 +1,61 @@
+"""Shared domain layer — typed objects, adapter ABCs, and stub implementations."""
+
+from .adapters import DataAdapter, ExecutionAdapter
+from .exceptions import (
+    AuditIncompleteError,
+    DataIntegrityError,
+    DataUnavailableError,
+    ExecutionError,
+    InsufficientDataError,
+    UnknownModelError,
+    WeightSumError,
+)
+from .objects import (
+    AuditRecord,
+    EvaluationReport,
+    ExecutionIntent,
+    ExperimentParams,
+    MarketDataset,
+    MarketState,
+    OHLCVBar,
+    Order,
+    RankedUniverse,
+    RiskDecision,
+    RunConfig,
+    ScoreSet,
+    TargetPortfolio,
+    TickerData,
+    TickerFeatures,
+    Universe,
+)
+from .stubs import StubDataAdapter, StubExecutionAdapter
+
+__all__ = [
+    "RunConfig",
+    "OHLCVBar",
+    "TickerData",
+    "TickerFeatures",
+    "Order",
+    "Universe",
+    "MarketDataset",
+    "MarketState",
+    "ExperimentParams",
+    "ScoreSet",
+    "RankedUniverse",
+    "TargetPortfolio",
+    "RiskDecision",
+    "ExecutionIntent",
+    "EvaluationReport",
+    "AuditRecord",
+    "DataAdapter",
+    "ExecutionAdapter",
+    "StubDataAdapter",
+    "StubExecutionAdapter",
+    "DataUnavailableError",
+    "DataIntegrityError",
+    "InsufficientDataError",
+    "UnknownModelError",
+    "WeightSumError",
+    "ExecutionError",
+    "AuditIncompleteError",
+]

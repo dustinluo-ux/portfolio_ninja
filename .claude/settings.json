@@ -1,0 +1,30 @@
+{
+  "model": "claude-sonnet-4-6",
+  "enabledMcpjsonServers": [
+    "filesystem"
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'conda run -n \"$(basename \"$PWD\")\" python scripts/check_adr.py'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'conda run -n \"$(basename \"$PWD\")\" python -m ruff check --fix src/ --quiet --exit-zero 2>/dev/null || true'"
+          }
+        ]
+      }
+    ]
+  }
+}

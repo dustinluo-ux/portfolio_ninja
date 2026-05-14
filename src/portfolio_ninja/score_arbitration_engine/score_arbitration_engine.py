@@ -1,5 +1,4 @@
 import hashlib
-from decimal import Decimal
 
 from portfolio_ninja.domain.objects import RankedUniverse, ScoreSet
 

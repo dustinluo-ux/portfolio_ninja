@@ -1,6 +1,6 @@
 import hashlib
 import json
-from datetime import date, timezone
+from datetime import date
 
 from portfolio_ninja.domain.objects import RunConfig, Universe
 

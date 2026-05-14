@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'conda run -n \"$(basename \"$PWD\")\" python scripts/check_adr.py'"
+            "command": "bash -c 'ENV=\"$(basename \"$PWD\")\"; conda run -n \"$ENV\" python scripts/check_adr.py 2>/dev/null || conda run -n base python scripts/check_adr.py'"
           }
         ]
       }
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'conda run -n \"$(basename \"$PWD\")\" python -m ruff check --fix src/ --quiet --exit-zero 2>/dev/null || true'"
+            "command": "bash -c 'ENV=\"$(basename \"$PWD\")\"; conda run -n \"$ENV\" python -m ruff check --fix src/ --quiet --exit-zero 2>/dev/null || conda run -n base python -m ruff check --fix src/ --quiet --exit-zero 2>/dev/null || true'"
           }
         ]
       }

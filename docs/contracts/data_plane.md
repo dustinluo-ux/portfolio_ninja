@@ -1,5 +1,8 @@
 # Contract: DataPlane
 
+## Version
+v1 (frozen 2026-05-13). Changes to inputs, outputs, or invariants require an Architecture Decision Record in `docs/adr/`. Cross-node contract changes are forbidden without an explicit version bump and ADR approval.
+
 ## Purpose
 Fetch market data (OHLCV bars, news sentiment, fundamentals) for all tickers in a validated `Universe` via the injected `DataAdapter`; emit a typed, lineage-annotated `MarketDataset`.
 

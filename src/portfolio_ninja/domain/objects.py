@@ -3,6 +3,40 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
+
+
+class SourceCriticality(str, Enum):
+    CRITICAL = "CRITICAL"
+    DEGRADED = "DEGRADED"
+
+
+# Data source criticality classification (mined from legacy ai_supply_chain_trading/src/data/data_quality.py)
+CRITICAL_SOURCES: list[str] = ["prices", "smh_benchmark", "regime_status"]
+DEGRADED_SOURCES: list[str] = ["eodhd_news", "tiingo_news", "marketaux_news", "meta_weights"]
+
+
+@dataclass
+class DataQualityReport:
+    """Data quality: tracks which critical/degraded data sources are missing or degraded."""
+
+    critical_missing: list[str] = field(default_factory=list)
+    degraded_missing: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+    @property
+    def can_rebalance(self) -> bool:
+        """True only if all critical sources are present."""
+        return len(self.critical_missing) == 0
+
+    def to_dict(self) -> dict:
+        """JSON-serializable dict suitable for audit logging."""
+        return {
+            "critical_missing": list(self.critical_missing),
+            "degraded_missing": list(self.degraded_missing),
+            "warnings": list(self.warnings),
+            "can_rebalance": self.can_rebalance,
+        }
 
 
 @dataclass

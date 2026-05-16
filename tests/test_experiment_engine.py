@@ -9,7 +9,7 @@ VALID_CONFIG = RunConfig(tickers=["AAPL", "MSFT"], run_mode="backtest", window_d
 def test_experiment_engine_valid_config_returns_valid_experiment_params():
     ep = create_experiment_params(VALID_CONFIG)
     assert ep.validation_status == "valid"
-    assert ep.scoring_model_id == "stub_v1"
+    assert ep.scoring_model_id == "technical_composite_v1"
     assert ep.top_n == 5
     assert ep.rebalance_freq == "daily"
     assert len(ep.params_hash) == 64
@@ -43,5 +43,10 @@ def test_experiment_engine_validation_status_is_valid_on_success():
 
 
 def test_experiment_engine_scoring_model_id_is_propagated_correctly():
-    ep = create_experiment_params(VALID_CONFIG, scoring_model_id="my_model_v2")
-    assert ep.scoring_model_id == "my_model_v2"
+    ep = create_experiment_params(VALID_CONFIG, scoring_model_id="stub_v1")
+    assert ep.scoring_model_id == "stub_v1"
+
+
+def test_experiment_engine_unregistered_model_raises():
+    with pytest.raises(ValueError, match="not in"):
+        create_experiment_params(VALID_CONFIG, scoring_model_id="nonexistent_model_xyz")

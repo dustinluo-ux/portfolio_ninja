@@ -20,13 +20,13 @@ implemented
 - `domain` — provides `RunConfig` and `ExperimentParams` typed dataclasses
 
 ## Invariants
-- `experiment_params.scoring_model_id` is non-empty string; raises `ValueError` otherwise
+- `experiment_params.scoring_model_id` is a member of `_REGISTERED_SCORING_MODELS`; raises `ValueError` otherwise
 - `experiment_params.top_n >= 1`; raises `ValueError("top_n must be >= 1")` otherwise
 - `experiment_params.rebalance_freq` is one of `{"daily", "weekly", "monthly"}`; raises `ValueError` otherwise
 - `experiment_params.params_hash` is a SHA-256 hex digest of `(scoring_model_id, str(top_n), rebalance_freq)`
 - `experiment_params.validation_status == "valid"` on successful exit
 - `experiment_params.reason_codes` is an empty list on success
-- MVP default values: `scoring_model_id = "stub_v1"`, `top_n = 5`, `rebalance_freq = "daily"`
+- Default values: `scoring_model_id = "technical_composite_v1"`, `top_n = 5`, `rebalance_freq = "daily"` (from `config/experiment_config.yaml`)
 - Monetary values: Decimal only, never float
 - No external I/O; purely in-memory construction
 
@@ -35,7 +35,7 @@ implemented
 |---------|-------------|--------|------------|
 | `top_n < 1` (including 0 or negative) | L | H | Raises `ValueError("top_n must be >= 1")` immediately |
 | Invalid `rebalance_freq` | L | M | Raises `ValueError(f"rebalance_freq '{val}' not in {'daily','weekly','monthly'}")` |
-| Empty `scoring_model_id` | L | H | Raises `ValueError("scoring_model_id must not be empty")` |
+| Unregistered `scoring_model_id` | L | H | Raises `ValueError` listing valid IDs from `_REGISTERED_SCORING_MODELS` |
 
 ## Tests Required
 - [ ] `test_experiment_engine_valid_config_returns_valid_experiment_params`
@@ -50,11 +50,12 @@ implemented
 - [ ] Returns `ExperimentParams` with `validation_status == "valid"` for valid config
 - [ ] Raises `ValueError` when `top_n < 1` or `rebalance_freq` is not in the allowed set
 - [ ] `params_hash` is a non-empty SHA-256 hex string identical across two calls with same inputs
-- [ ] `scoring_model_id` defaults to `"stub_v1"` in MVP
+- [ ] `scoring_model_id` defaults to `"technical_composite_v1"` (from `config/experiment_config.yaml`)
 - [ ] No `float` anywhere in module code
 
 ## Upstream Providers
 - External caller / orchestrator (supplies `RunConfig`)
+- ExperimentConfigLoader (optional; orchestrator reads `config/experiment_config.yaml` before calling `create_experiment_params`; the engine itself has no I/O)
 
 ## Downstream Consumers
 - ScoringEngine (consumes `ExperimentParams` as side-input)

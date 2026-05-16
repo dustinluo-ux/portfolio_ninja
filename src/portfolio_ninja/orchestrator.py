@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Optional
+
 from portfolio_ninja.audit_monitor import assemble_audit_record
 from portfolio_ninja.data_plane import fetch_market_data
 from portfolio_ninja.domain.adapters import DataAdapter, ExecutionAdapter
 from portfolio_ninja.domain.objects import AuditRecord, RunConfig
 from portfolio_ninja.evaluation_engine import evaluate_cycle
 from portfolio_ninja.execution_engine import execute_orders
-from portfolio_ninja.experiment_engine import create_experiment_params
+from portfolio_ninja.experiment_engine import create_experiment_params, load_experiment_config
 from portfolio_ninja.market_state_engine import compute_market_state
 from portfolio_ninja.portfolio_construction_engine import construct_portfolio
 from portfolio_ninja.risk_engine import evaluate_risk
@@ -19,10 +24,15 @@ def run(
     exec_adapter: ExecutionAdapter,
     run_mode: str = "backtest",
     window_days: int = 730,
-    scoring_model_id: str = "stub_v1",
+    scoring_model_id: Optional[str] = None,
     top_n: int = 5,
     rebalance_freq: str = "daily",
+    config_path: Optional[Path] = None,
 ) -> AuditRecord:
+    if scoring_model_id is None:
+        _cfg = load_experiment_config(config_path) if config_path else load_experiment_config()
+        scoring_model_id = _cfg["scoring_model_id"]
+
     config = RunConfig(tickers=tickers, run_mode=run_mode, window_days=window_days)
 
     universe = create_universe(config)

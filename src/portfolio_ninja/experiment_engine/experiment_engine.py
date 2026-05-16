@@ -3,9 +3,12 @@ import hashlib
 from portfolio_ninja.domain.objects import ExperimentParams, RunConfig
 
 _VALID_REBALANCE_FREQS = {"daily", "weekly", "monthly"}
-_DEFAULT_SCORING_MODEL_ID = "stub_v1"
+_DEFAULT_SCORING_MODEL_ID = "technical_composite_v1"
 _DEFAULT_TOP_N = 5
 _DEFAULT_REBALANCE_FREQ = "daily"
+
+# Ported from legacy model_factory.py MODEL_REGISTRY — prevents invalid IDs reaching ScoringEngine.
+_REGISTERED_SCORING_MODELS: frozenset[str] = frozenset({"stub_v1", "technical_composite_v1"})
 
 
 def create_experiment_params(
@@ -14,8 +17,10 @@ def create_experiment_params(
     top_n: int = _DEFAULT_TOP_N,
     rebalance_freq: str = _DEFAULT_REBALANCE_FREQ,
 ) -> ExperimentParams:
-    if not scoring_model_id:
-        raise ValueError("scoring_model_id must not be empty")
+    if scoring_model_id not in _REGISTERED_SCORING_MODELS:
+        raise ValueError(
+            f"scoring_model_id '{scoring_model_id}' not in {sorted(_REGISTERED_SCORING_MODELS)}"
+        )
     if top_n < 1:
         raise ValueError("top_n must be >= 1")
     if rebalance_freq not in _VALID_REBALANCE_FREQS:

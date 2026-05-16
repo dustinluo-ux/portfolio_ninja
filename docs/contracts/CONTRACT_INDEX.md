@@ -3,6 +3,7 @@
 | Module | Status | Version | Upstream | Downstream | Contract |
 |--------|--------|---------|----------|------------|---------|
 | domain_objects | implemented | v1 | — | all modules | [link](./domain_objects.md) |
+| DateNormalizer | implemented | v1 | caller (real_adapter, normalize_csv CLI) | DataPlane (pre-merge gate), normalize_csv.py | [link](./date_normalizer.md) |
 | UniverseGateway | implemented | v1 | external (ticker list + RunConfig) | DataPlane | [link](./universe_gateway.md) |
 | DataPlane | implemented | v1 | UniverseGateway, DataAdapter (injected) | MarketStateEngine | [link](./data_plane.md) |
 | MarketStateEngine | implemented | v1 | DataPlane | ScoringEngine | [link](./market_state_engine.md) |

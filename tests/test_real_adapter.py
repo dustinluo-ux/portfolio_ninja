@@ -362,3 +362,173 @@ def test_fundamentals_force_refresh():
         result = adapter._ensure_fundamentals("TEST")
         # Download with fake key fails, existing file is returned gracefully
         assert result == fmp_path
+
+
+# ── Re-download trigger: needs_redownload flag ──────────────────────────────
+
+def test_ohlcv_needs_redownload_triggers_force_fresh():
+    """When normalize detects unresolvable format issues, force-fresh re-download is triggered."""
+    from portfolio_ninja.data_plane.real_adapter import _download_ohlcv_yfinance
+
+    with tempfile.TemporaryDirectory() as tmp:
+        csv_dir = Path(tmp) / "nasdaq" / "csv"
+        csv_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a CSV with unresolvable format issues (will trigger needs_redownload=True)
+        csv_path = csv_dir / "TEST.csv"
+        csv_path.write_text(
+            "Date,Open,High,Low,Close,Volume\n"
+            "01/13/2026,100,101,99,100.5,1000000\n"
+            "02/14/2026,101,102,100,101.5,1000000\n"
+            "12/01/2025,102,103,101,102.5,1000000\n"
+            "25/12/2025,103,104,102,103.5,1000000\n"
+        )
+
+        # Mock yfinance to return clean data; verify the existing file is replaced
+        import unittest.mock
+
+        clean_df = pd.DataFrame({
+            "Date": ["2026-01-01", "2026-01-02", "2026-01-03"],
+            "Open": [100, 101, 102],
+            "High": [101, 102, 103],
+            "Low": [99, 100, 101],
+            "Close": [100.5, 101.5, 102.5],
+            "Volume": [1000000, 1000000, 1000000],
+            "Adjusted Close": [100.5, 101.5, 102.5],
+        })
+        clean_df["Date"] = pd.to_datetime(clean_df["Date"])
+        clean_df = clean_df.set_index("Date")
+
+        with unittest.mock.patch("yfinance.download", return_value=clean_df):
+            result = _download_ohlcv_yfinance(
+                "TEST", Path(tmp), "2026-01-01", "2026-12-31", ["nasdaq/csv"]
+            )
+
+        # Result should be the CSV path
+        assert result == csv_path
+        # File should exist and be cleanly formatted (not contain the bad dates)
+        assert csv_path.exists()
+        content = csv_path.read_text()
+        # New file should have ISO-formatted dates
+        assert "2026-01-" in content
+        # Old unresolvable dates should be gone
+        assert "25/12/2025" not in content
+        assert "01/13/2026" not in content
+
+
+# ── Phase 3: News and Fundamentals force_fresh pattern ──────────────────────
+
+
+def test_download_news_force_fresh_skips_merge():
+    """When force_fresh=True, news download skips merge and overwrites from scratch."""
+    import unittest.mock
+
+    from portfolio_ninja.data_plane.real_adapter import _download_news_sentiment_eodhd
+
+    with tempfile.TemporaryDirectory() as tmp:
+        news_dir = Path(tmp)
+
+        # Create an existing parquet with old data
+        old_df = pd.DataFrame({
+            "Date": ["2025-01-01", "2025-01-02"],
+            "Ticker": ["NVDA", "MSFT"],
+            "Sentiment": [0.5, -0.3],
+        })
+        old_path = news_dir / "eodhd_global_backfill.parquet"
+        old_df.to_parquet(old_path, index=False, engine="pyarrow")
+
+        # Mock API response with new data
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+            {
+                "date": "2026-05-16",
+                "sentiment": {"polarity": 0.8},
+            },
+        ]
+
+        with unittest.mock.patch("requests.get", return_value=mock_response):
+            result = _download_news_sentiment_eodhd(
+                ["NVDA"], news_dir, "fake_key", "2026-01-01", "2026-05-16",
+                force_fresh=True
+            )
+
+        # Result is the parquet path
+        assert result == old_path
+        # File was overwritten: should only contain new data (from force_fresh)
+        result_df = pd.read_parquet(result)
+        # When force_fresh=True, only the newly downloaded data is in the file (no merge)
+        assert len(result_df) == 1  # only the new record, not the old ones
+        assert result_df.iloc[0]["Date"] == "2026-05-16"
+
+
+def test_download_news_normal_merge_includes_existing():
+    """When force_fresh=False (default), news download merges with existing data."""
+    import unittest.mock
+
+    from portfolio_ninja.data_plane.real_adapter import _download_news_sentiment_eodhd
+
+    with tempfile.TemporaryDirectory() as tmp:
+        news_dir = Path(tmp)
+
+        # Create an existing parquet with old data
+        old_df = pd.DataFrame({
+            "Date": ["2025-01-01", "2025-01-02"],
+            "Ticker": ["NVDA", "MSFT"],
+            "Sentiment": [0.5, -0.3],
+        })
+        old_path = news_dir / "eodhd_global_backfill.parquet"
+        old_df.to_parquet(old_path, index=False, engine="pyarrow")
+
+        # Mock API response with new data
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+            {
+                "date": "2026-05-16",
+                "sentiment": {"polarity": 0.8},
+            },
+        ]
+
+        with unittest.mock.patch("requests.get", return_value=mock_response):
+            result = _download_news_sentiment_eodhd(
+                ["NVDA"], news_dir, "fake_key", "2026-01-01", "2026-05-16",
+                force_fresh=False  # normal merge
+            )
+
+        # File contains merged data (old + new)
+        result_df = pd.read_parquet(result)
+        # Should have old data (2) + new data (1) = 3 rows
+        assert len(result_df) == 3
+        # Verify new data is present
+        assert result_df["Date"].str.contains("2026-05-16").any()
+        # Verify old data is present
+        assert result_df["Date"].str.contains("2025-01-").any()
+
+
+def test_download_fundamentals_force_fresh_parameter():
+    """Verify force_fresh parameter is accepted by fundamentals download."""
+    import unittest.mock
+
+    from portfolio_ninja.data_plane.real_adapter import _download_fundamentals_fmp
+
+    with tempfile.TemporaryDirectory() as tmp:
+        fundamentals_dir = Path(tmp)
+
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+            {"epsDiluted": 1.5, "date": "2026-Q1"},
+        ]
+
+        with unittest.mock.patch("requests.get", return_value=mock_response):
+            result = _download_fundamentals_fmp(
+                "NVDA", fundamentals_dir, "fake_key", force_fresh=True
+            )
+
+        # File was created
+        assert result.exists()
+        # Verify it's a valid parquet
+        df = pd.read_parquet(result)
+        assert "statement" in df.columns
+        assert df.iloc[0]["statement"] == "income_statement"

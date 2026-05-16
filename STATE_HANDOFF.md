@@ -1,5 +1,39 @@
 ---
 
+## Objective: SPY Auto-Inject + PCE Regime Max Longs + SCSI Docs — COMPLETE
+
+### Session 2026-05-16 (SPY auto-inject, PCE regime max_longs, SCSI docs):
+
+**Three decisions executed (all user-approved):**
+
+1. **SCSI docs**: ADR 0003 and `market_state_engine.md` contract updated with full activation path (sealed-node gate documented; no code change).
+2. **SPY auto-inject** (ADR 0004): `Universe.regime_tickers` + `MarketDataset.regime_data` added (both optional, backward-compat). UniverseGateway injects SPY into `regime_tickers` on every universe. DataPlane fetches SPY best-effort (try-except; no error if CSV absent). `_regime_signal()` reads from `dataset.regime_data.get("SPY")`.
+3. **PCE regime max_longs** (ADR 0005): `construct_portfolio(regime="EXPANSION")` added. `max_longs=3` (CONTRACTION), `max_longs=5` (EXPANSION). Orchestrator passes `market_state.regime`. All existing tests unaffected (default EXPANSION).
+
+**Files changed:**
+- `docs/adr/0003-market-state-engine-legacy-features.md` — SCSI activation path appended
+- `docs/adr/0004-spy-auto-inject.md` — new ADR (Status: Accepted)
+- `docs/adr/0005-pce-regime-max-longs.md` — new ADR (Status: Accepted)
+- `docs/contracts/market_state_engine.md` — Future Work: SCSI Full Activation section
+- `docs/contracts/universe_gateway.md` — SPY regime_tickers invariant
+- `docs/contracts/portfolio_construction_engine.md` — regime input + max_longs invariants
+- `src/portfolio_ninja/domain/objects.py` — Universe.regime_tickers, MarketDataset.regime_data
+- `src/portfolio_ninja/universe_gateway/universe_gateway.py` — SPY injection
+- `src/portfolio_ninja/data_plane/data_plane.py` — best-effort regime fetch
+- `src/portfolio_ninja/market_state_engine/market_state_engine.py` — _regime_signal() → regime_data
+- `src/portfolio_ninja/portfolio_construction_engine/portfolio_construction_engine.py` — regime param + max_longs
+- `src/portfolio_ninja/orchestrator.py` — passes market_state.regime
+- `tests/test_universe_gateway.py` — 2 new tests for regime_tickers
+- `tests/test_e2e_universe_gateway.py` — SPY in regime_tickers assertion
+- `tests/test_portfolio_construction_engine.py` — 2 new tests (CONTRACTION caps at 3, EXPANSION caps at 5)
+
+**Full test suite: 253/253 PASS, 89.31% coverage**
+**Commit: d9e2d36**
+
+**Next step:** Phase 5 — TBD by user.
+
+---
+
 ## Objective: MarketStateEngine Legacy Feature Integration — COMPLETE
 
 ### Session 2026-05-16 (MarketStateEngine: regime, volatility_ewma, scsi):
@@ -248,3 +282,5 @@ Summary: DateNormalizer implementation (22 tests, 86% coverage), RealAdapter int
 ### Auto-snapshot: 2026-05-16T20:46:07+08:00
 
 ### Auto-snapshot: 2026-05-16T21:09:08+08:00
+
+### Auto-snapshot: 2026-05-16T21:14:00+08:00

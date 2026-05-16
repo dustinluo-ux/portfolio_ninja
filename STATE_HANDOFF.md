@@ -1,5 +1,76 @@
 ---
 
+## Objective: MarketStateEngine Legacy Feature Integration — COMPLETE
+
+### Session 2026-05-16 (MarketStateEngine: regime, volatility_ewma, scsi):
+
+**Three LEGACY-mined features added to MarketStateEngine (all Class B rewrites):**
+- `regime: str` on `MarketState` — SPY/200-SMA binary; graceful fallback to EXPANSION + reason_code when SPY absent. Mined from `src/execution/regime_controller.py`.
+- `volatility_ewma: Decimal` on `TickerFeatures` — EWMA std dev, span=38 (α=2/39). Mined from `pods/pod_core.py` EWMA_SPAN=38.
+- `scsi: Decimal` on `TickerFeatures` — Stress Composite Signal Index; MVP article_count=1 formula: `(sentiment − 0.5) × ln(2)`. Mined from `src/signals/feature_engineering.py` L44-48.
+
+**Files changed:**
+- `docs/adr/0003-market-state-engine-legacy-features.md` — ADR (sealed-node gate; Status: Accepted)
+- `docs/contracts/market_state_engine.md` — 3 new outputs, 4 new invariants, 2 new failure modes
+- `src/portfolio_ninja/domain/objects.py` — TickerFeatures +2 fields; MarketState +regime field; validate() updated
+- `src/portfolio_ninja/market_state_engine/market_state_engine.py` — 3 constants, 3 helpers, updated compute_market_state
+- `tests/test_market_state_engine.py` — 2 new field assertions + 3 new tests
+- `tests/test_scoring_engine.py` — 6 TickerFeatures + 3 MarketState construction sites updated
+- `tests/test_domain.py` — 1 TickerFeatures factory + 5 MarketState sites updated
+- `tests/test_e2e_market_state_engine.py` — 7 E2E tests (real CSV data, no mocks)
+- `scripts/_sample_market_state.py` — real output verification script
+
+**Real sample output (2026-05-16, tickers: ACN, AES, AI, window=120d):**
+```
+as_of_date:        2026-05-16
+regime:            EXPANSION  (reason: regime_spy_missing)
+params_hash:       792bac98688b7eb8e429aec13fc79e472ddd0742bf84addffb835416708217e8
+
+Ticker       momentum_20d  volatility_20d   rsi_14   vol_ewma       scsi
+------------------------------------------------------------------------
+ACN        -0.1547              0.024711  33.7333   0.027990   0.244608
+AES         0.0343              0.003086  69.0476   0.017954   0.209651
+AI          0.0397              0.045532  48.2480   0.045739   0.235849
+```
+
+**Full test suite: 249/249 PASS, 88.96% coverage**
+
+**Next step:** Phase 4 — ScoringEngine regime-adjusted weights (requires ADR 0004)
+
+---
+
+## Objective: UniverseGateway E2E Real-Data Proof — COMPLETE
+
+### Session 2026-05-16 (UniverseGateway E2E):
+
+**Audit finding:** Implementation was clean (no stubs/mocks). Root issue was the E2E fixture `_has_sufficient_bars()` checking total CSV line count instead of actual bars in the 120-day window. Japanese tickers (6758.T, 6861.T) had 300+ CSV rows but only 2 bars in the recent window, causing E2E pipeline failures.
+
+**Fixes applied:**
+- `tests/test_e2e_real_data.py`: replaced CSV-line-count check with `_load_csv_bars()` call (same parameters as real pipeline) — stale tickers now correctly excluded
+- `tests/test_e2e_pipeline.py`: same fix; removed `_MIN_CSV_LINES` constant; added `_WINDOW_DAYS` and `_MIN_BARS_ADAPTER` for clarity
+
+**New artifact:** `tests/test_e2e_universe_gateway.py` — 7 E2E tests using real CSV-discovered tickers:
+  - `test_e2e_universe_gateway_valid_universe_from_real_tickers` — full field validation
+  - `test_e2e_universe_gateway_hash_is_deterministic` — same inputs → same hash
+  - `test_e2e_universe_gateway_hash_changes_with_ticker_change` — sensitivity
+  - `test_e2e_universe_gateway_hash_changes_with_run_mode` — sensitivity
+  - `test_e2e_universe_gateway_hash_changes_with_window` — sensitivity
+  - `test_e2e_universe_gateway_downstream_dataplane_accepts_output` — no adapter hacks needed
+  - `test_e2e_universe_gateway_dedup_with_real_tickers` — reason_codes populated
+
+**Runtime evidence (2026-05-16):**
+```
+Discovered tickers: ['ACN', 'AES', 'AI', 'ALAB', 'AMT']
+Universe: tickers=['ACN','AES','AI','ALAB','AMT'] run_mode=backtest window_days=120
+         as_of_date=2026-05-16 params_hash=75a9a0a37f5456f601078ec76087eeed... validation=valid
+Hash sensitivity: 4 distinct hashes for 4 distinct configs — all True
+DataPlane consumed Universe directly: 5 tickers covered, validation=valid
+```
+
+**Full test suite: 239/239 PASS, 89.54% coverage**
+
+---
+
 ## Objective: DataPlane Runtime Validation + ScoringEngine technical_composite_v1 — COMPLETE
 
 ## Status: All three phases complete. Test suite: 232/232 PASS (89.62% coverage).
@@ -163,3 +234,13 @@ Summary: DateNormalizer implementation (22 tests, 86% coverage), RealAdapter int
 ### Auto-snapshot: 2026-05-16T16:58:34+08:00
 
 ### Auto-snapshot: 2026-05-16T17:11:43+08:00
+
+### Auto-snapshot: 2026-05-16T17:41:23+08:00
+
+### Auto-snapshot: 2026-05-16T17:58:48+08:00
+
+### Auto-snapshot: 2026-05-16T18:36:33+08:00
+
+### Auto-snapshot: 2026-05-16T18:43:55+08:00
+
+### Auto-snapshot: 2026-05-16T18:57:05+08:00

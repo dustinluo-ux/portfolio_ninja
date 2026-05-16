@@ -14,7 +14,7 @@ from portfolio_ninja.market_state_engine import compute_market_state
 from portfolio_ninja.universe_gateway import create_universe
 
 BASE = _DEFAULT_BASE
-WINDOW_DAYS = 120
+WINDOW_DAYS = 730
 MIN_BARS = 60
 
 

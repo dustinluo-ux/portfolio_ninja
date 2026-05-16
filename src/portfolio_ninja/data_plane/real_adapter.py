@@ -47,6 +47,7 @@ _FMP_INCOME_URL = "https://financialmodelingprep.com/api/v3/income-statement/"
 
 CSV_SUBDIRS = ["nasdaq/csv", "forbes2000/csv", "nyse/csv"]
 _DEFAULT_BASE = Path("C:/portfolio_ninja/trading_data/stock_market_data")
+_BENCHMARK_BASE = Path("C:/portfolio_ninja/trading_data/benchmarks")
 
 # Paths for sentiment and fundamentals — parallel to CSV data
 _NEWS_DIR = Path("C:/portfolio_ninja/trading_data/news")
@@ -76,10 +77,14 @@ def _decimal(val: str) -> Decimal:
         return Decimal("NaN")
 
 
-def _find_csv_path(base_dir: Path, subdirs: list[str], ticker: str) -> Optional[Path]:
+def _find_csv_path(
+    base_dir: Path, subdirs: list[str], ticker: str,
+    flat_dirs: Optional[list[Path]] = None,
+) -> Optional[Path]:
     """Search subdirectories for {TICKER}.csv case-insensitive.
 
     RECYCLED from ai_supply_chain_trading/src/data/csv_provider.find_csv_path().
+    flat_dirs: additional flat directories to search (no subdirs, e.g. benchmarks/).
     """
     ticker_clean = ticker.upper().replace(".CSV", "")
     for subdir in subdirs:
@@ -89,6 +94,13 @@ def _find_csv_path(base_dir: Path, subdirs: list[str], ticker: str) -> Optional[
         for path in search_dir.iterdir():
             if path.is_file() and path.stem.upper() == ticker_clean:
                 return path
+    if flat_dirs:
+        for flat_dir in flat_dirs:
+            if not flat_dir.is_dir():
+                continue
+            for path in flat_dir.iterdir():
+                if path.is_file() and path.stem.upper() == ticker_clean:
+                    return path
     return None
 
 
@@ -139,7 +151,7 @@ def _load_csv_bars(
         high = _col("high", "High")
         low = _col("low", "Low")
         open_p = _col("open", "Open")
-        close = _col("close", "Close")
+        close = _col("close", "adj_close")
         volume_str = row.get("volume", row.get("Volume", ""))
         volume = int(float(volume_str.strip())) if volume_str.strip() else 0
 
@@ -501,7 +513,7 @@ class RealDataAdapter:
 
     def _ensure_ohlcv(self, ticker: str, as_of: date) -> Path | None:
         """Find local CSV; if missing or stale, download incrementally to fill gap."""
-        csv_path = _find_csv_path(self.base_path, self.subdirs, ticker)
+        csv_path = _find_csv_path(self.base_path, self.subdirs, ticker, flat_dirs=[_BENCHMARK_BASE])
         if csv_path is not None and not self._ohlcv_stale(csv_path) and not self.force_refresh:
             return csv_path
 

@@ -1,10 +1,28 @@
 ---
 
-## Objective: CSV date normalization utility — ALL PHASES COMPLETE
+## Objective: Sweeping data update CLI — COMPLETE
 
-## Status: Phases 1, 2, & 3 COMPLETE. All tests passing (53/53 for date_normalizer + real_adapter), pattern extended to news & fundamentals.
+## Status: Update script fully functional. All 3 data types (OHLCV, news, fundamentals) download correctly. Production-ready.
 
-## What's done (session 2026-05-16 continued):
+## What's done (session 2026-05-16 Phase 4: Sweeping Update CLI):
+
+**Extended `scripts/update_data.py` from OHLCV-only to full sweep:**
+- Loads .env automatically (EODHD_API_KEY, FMP_API_KEY)
+- Batch news update: `adapter._ensure_news(tickers, date.today(), window_days=365)`
+- Per-ticker fundamentals: `adapter._ensure_fundamentals(ticker)` inside loop
+- Added `--skip-news` and `--skip-fundamentals` flags
+- Status line shows all three data types
+- Test verified: all 3 types download correctly for AAPL, MSFT, NVDA
+- Production command: `conda run -n portfolio_ninja python scripts/update_data.py`
+
+**Key design:**
+- No `--force-refresh` flag needed in normal usage — staleness checks handle intelligent updates
+- OHLCV: refreshes if > 1 day old
+- News: refreshes if > 7 days old or missing
+- Fundamentals: refreshes if missing or stale
+- Graceful degradation: skips data types if API keys absent
+
+## Prior work (session 2026-05-16 Phases 1–3):
 
 **Phase 1: Date Normalizer Implementation (22 tests, 86% coverage)**
 - Root cause: EU/US date transposition via `_parse_date()` trying `%m/%d/%Y` before `%d/%m/%Y`
@@ -84,3 +102,7 @@ Phase 3 (deferred): Extend pattern to fundamentals and news download functions.
 ### Auto-snapshot: 2026-05-16T12:15:28+08:00
 
 ### Auto-snapshot: 2026-05-16T12:31:08+08:00
+
+### Auto-snapshot: 2026-05-16T12:46:53+08:00
+
+### Auto-snapshot: 2026-05-16T13:22:11+08:00

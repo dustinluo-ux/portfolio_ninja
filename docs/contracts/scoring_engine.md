@@ -26,7 +26,15 @@ implemented
 - `score_set.scores` has an entry for every ticker in `market_state.features`; raises `KeyError` if a feature is missing during scoring
 - All score values are `decimal.Decimal` in range `[Decimal("0"), Decimal("1")]`; raises `ValueError` if any score falls outside this range
 - `score_set.model_id == experiment_params.scoring_model_id`
-- MVP stub scoring formula: `score = Decimal(str(abs(hash(ticker)) % 1000)) / Decimal("1000")`; deterministic per ticker string
+- Registered model IDs: `{"stub_v1", "technical_composite_v1"}`
+- `stub_v1` scoring formula: `score = Decimal(str(abs(hash(ticker)) % 1000)) / Decimal("1000")`; deterministic per ticker string
+- `technical_composite_v1` scoring formula:
+    1. Extract `(momentum_20d, volatility_20d, rsi_14)` for all tickers from `market_state.features`
+    2. Cross-sectional min-max normalize each factor independently across all tickers in the run:
+       `norm = (v − min) / (max − min)` when `max > min`; `Decimal("0.5")` for all when `max == min`
+    3. `score[ticker] = 0.4 × norm_momentum + 0.3 × (1 − norm_volatility) + 0.3 × (norm_rsi_14 / 100)`
+    4. Clamp result to `[Decimal("0"), Decimal("1")]`
+    5. All arithmetic in `decimal.Decimal`; no `float` in computation path
 - `score_set.validation_status == "valid"` on successful exit
 - `score_set.as_of_date == market_state.as_of_date`
 - `score_set.params_hash` is SHA-256 hex of `(market_state.params_hash, experiment_params.params_hash)`

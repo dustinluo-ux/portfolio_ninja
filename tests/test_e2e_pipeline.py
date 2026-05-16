@@ -4,6 +4,8 @@ Tests are skipped if the trading data directory does not exist.
 No network calls — RealDataAdapter runs with download_enabled=False.
 """
 
+from datetime import date
+
 import pytest
 
 from portfolio_ninja import orchestrator
@@ -12,11 +14,13 @@ from portfolio_ninja.data_plane.real_adapter import (
     CSV_SUBDIRS,
     RealDataAdapter,
     _find_csv_path,
+    _load_csv_bars,
 )
 from portfolio_ninja.domain.stubs import StubExecutionAdapter
 
 _BASE = _DEFAULT_BASE
-_MIN_CSV_LINES = 300  # Ensure sufficient complete bars in any window
+_WINDOW_DAYS = 120
+_MIN_BARS_ADAPTER = 60  # RealDataAdapter minimum
 
 
 def _discover_tickers(n: int = 20) -> list[str]:
@@ -33,13 +37,13 @@ def _discover_tickers(n: int = 20) -> list[str]:
 
 
 def _has_sufficient_bars(ticker: str) -> bool:
+    """True iff _load_csv_bars succeeds with the same parameters the pipeline uses."""
     path = _find_csv_path(_BASE, CSV_SUBDIRS, ticker)
     if path is None or not path.exists():
         return False
     try:
-        with open(path) as f:
-            count = sum(1 for _ in f) - 1
-        return count >= _MIN_CSV_LINES
+        _load_csv_bars(path, ticker, date.today(), _WINDOW_DAYS, min_rows=_MIN_BARS_ADAPTER)
+        return True
     except Exception:
         return False
 
@@ -51,7 +55,7 @@ def real_tickers():
     candidates = _discover_tickers(n=20)
     good = [t for t in candidates if _has_sufficient_bars(t)]
     if not good:
-        pytest.skip(f"No tickers with ≥{_MIN_CSV_LINES} CSV lines found")
+        pytest.skip(f"No tickers with ≥{_MIN_BARS_ADAPTER} in-window bars found")
     return good[:3]
 
 

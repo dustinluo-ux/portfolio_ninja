@@ -4,7 +4,7 @@
 Detects date format ambiguity in OHLCV CSV files using sequential (monotonic) validation and normalizes all dates to ISO 8601, deduplicates, removes future-dated rows, reconciles column schemas, and sorts chronologically — ensuring every CSV is clean before and after a merge operation.
 
 ## Status
-approved
+implemented
 
 ## Inputs
 

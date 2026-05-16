@@ -106,8 +106,14 @@ def _load_csv_bars(
     with open(path, "r", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
-            rows.append(row)
+            normalized = {}
+            for k, v in row.items():
+                if not k or not k.strip():
+                    # Unnamed columns (dates) go to "date" key
+                    normalized["date"] = v.strip()
+                else:
+                    normalized[k.strip().lower()] = v.strip()
+            rows.append(normalized)
 
     rows_by_date: dict[date, dict] = {}
     for row in rows:
@@ -136,6 +142,9 @@ def _load_csv_bars(
         close = _col("close", "Close")
         volume_str = row.get("volume", row.get("Volume", ""))
         volume = int(float(volume_str.strip())) if volume_str.strip() else 0
+
+        if close != close:  # close is NaN; skip this row entirely
+            continue
 
         if open_p != open_p:  # NaN check
             open_p = close

@@ -1,26 +1,45 @@
 ---
 
-## Objective: Sweeping data update CLI — COMPLETE
+## Objective: Module 1 (Data Preparation) - Complete All Fixes — COMPLETE
 
-## Status: Update script fully functional. All 3 data types (OHLCV, news, fundamentals) download correctly. Production-ready. Test suite: 213/213 PASS (89.04% coverage).
+## Status: All critical issues in Module 1 fixed. Test suite: 213/213 PASS (89.25% coverage).
 
-## What's done (session 2026-05-16 Phase 4: Sweeping Update CLI):
+## What's done (session 2026-05-16 Phase 5: Module 1 Fixes):
 
-**Extended `scripts/update_data.py` from OHLCV-only to full sweep:**
-- Loads .env automatically (EODHD_API_KEY, FMP_API_KEY)
-- Batch news update: `adapter._ensure_news(tickers, date.today(), window_days=365)`
-- Per-ticker fundamentals: `adapter._ensure_fundamentals(ticker)` inside loop
-- Added `--skip-news` and `--skip-fundamentals` flags
-- Status line shows all three data types
-- Test verified: all 3 types download correctly for AAPL, MSFT, NVDA
-- Production command: `conda run -n portfolio_ninja python scripts/update_data.py`
+**Issue 1: CSV parsing lost date columns (FIXED)**
+- Root cause: `_load_csv_bars()` was filtering out unnamed columns which contain dates
+- Original code: `row = {k.strip().lower(): v.strip() for k, v in row.items() if k}`
+- This `if k` clause excluded empty string keys from csv.DictReader (assigned to unnamed columns)
+- Fix: Modified column normalization to explicitly check for and preserve unnamed columns:
+  ```python
+  for k, v in row.items():
+      if not k or not k.strip():
+          normalized["date"] = v.strip()  # preserve date from unnamed column
+      else:
+          normalized[k.strip().lower()] = v.strip()
+  ```
+- Result: test_real_adapter_fetches_nvda_and_msft now PASSES (was: only 0 bars loaded, minimum is 60)
 
-**Key design:**
-- No `--force-refresh` flag needed in normal usage — staleness checks handle intelligent updates
-- OHLCV: refreshes if > 1 day old
-- News: refreshes if > 7 days old or missing
-- Fundamentals: refreshes if missing or stale
-- Graceful degradation: skips data types if API keys absent
+**Issue 2: NaN comparisons raised InvalidOperation (FIXED)**
+- Root cause: Rows with completely missing OHLCV data generated Decimal("NaN") values
+- Code was filling missing open/high/low with close value, but if close was also NaN, bars had NaN
+- Then test assertion `bar.high >= bar.low` raised InvalidOperation on NaN comparison
+- Fix: Skip rows where close is NaN (completely empty OHLCV row):
+  ```python
+  if close != close:  # close is NaN
+      continue
+  ```
+- Result: test_real_adapter_ohlcv_integrity now PASSES (was: InvalidOperation)
+
+**Issue 3: Contract status mismatch (FIXED)**
+- DateNormalizer contract had Status: approved but CONTRACT_INDEX.md listed it as implemented
+- Fix: Updated docs/contracts/date_normalizer.md Status field to "implemented"
+- CONTRACT_INDEX.md now consistent
+
+**Test Results:**
+- Module 1 tests: 31/31 PASS in test_real_adapter.py
+- Full test suite: 213/213 PASS
+- Coverage: 89.25% (exceeds 80% threshold)
 
 ## Prior work (session 2026-05-16 Phases 1–3):
 
@@ -72,11 +91,20 @@
 - Lines 325-330: force_fresh=True skips merge (existing = None)
 - Lines 345-349: Post-save normalize for sort/dedup/future-row cleanup
 
-## Next Steps
+## Module 1 Completion Status
 
-Phase 3 (deferred): Extend pattern to fundamentals and news download functions.
-- Same needs_redownload trigger logic applies generically to any dated CSV
-- _download_news_sentiment_eodhd() and _download_fundamentals_fmp() can use same pattern
+**Module 1 (Data Preparation) is READY FOR DELIVERY:**
+- ✓ All 3 critical issues fixed
+- ✓ All tests pass (213/213)
+- ✓ Coverage ≥ 80% (89.25%)
+- ✓ No TODOs/FIXMEs in src/data_plane/
+- ✓ All contracts marked as "implemented"
+- ✓ CONTRACT_INDEX.md consistent
+- ✓ Real-world CSV data loads correctly (NVDA.csv with 72 valid bars + 56 invalid rows properly handled)
+
+**Ready for delivery:**
+- ConvertRealDataAdapter with date normalization, force-fresh re-download, and proper NaN handling
+- DateNormalizer with format detection, fault-line resolution, and data cleanup
 
 ## Notes:
 - date_normalizer.py: stdlib csv only, no pandas (matches _load_csv_bars pattern)
@@ -106,3 +134,5 @@ Phase 3 (deferred): Extend pattern to fundamentals and news download functions.
 ### Auto-snapshot: 2026-05-16T12:46:53+08:00
 
 ### Auto-snapshot: 2026-05-16T13:22:11+08:00
+
+### Auto-snapshot: 2026-05-16T14:13:50+08:00

@@ -1,5 +1,42 @@
 ---
 
+## Objective: ExperimentEngine End-to-End — COMPLETE
+
+### Session 2026-05-16 (ExperimentEngine: config-driven defaults, real model, production CLI):
+
+**Three gaps closed:**
+1. `_DEFAULT_SCORING_MODEL_ID` was `"stub_v1"` — changed to `"technical_composite_v1"`.
+2. No persisted config file — added `config/experiment_config.yaml`.
+3. No production CLI — added `scripts/run_pipeline.py`.
+
+**Files created:**
+- `docs/adr/0006-experiment-config-driven-parameters.md` — MADR ADR, Status: Accepted
+- `config/experiment_config.yaml` — `scoring_model_id: technical_composite_v1`, `top_n: 5`, `rebalance_freq: daily`
+- `src/portfolio_ninja/experiment_engine/config_loader.py` — `load_experiment_config()` reads YAML, validates required keys
+- `scripts/run_pipeline.py` — production CLI; discovers tickers, loads config, calls `orchestrator.run()`, prints all 9 stage hashes
+- `tests/test_experiment_config_loader.py` — 5 unit tests for config_loader
+- `tests/test_e2e_experiment_engine.py` — 4 E2E tests (config file, default model, pipeline flow, model change sensitivity)
+
+**Files modified:**
+- `src/portfolio_ninja/experiment_engine/experiment_engine.py` — default `"stub_v1"` → `"technical_composite_v1"`; added `_REGISTERED_SCORING_MODELS` frozenset (ported from legacy `MODEL_REGISTRY`); registry guard replaces empty-string check
+- `src/portfolio_ninja/experiment_engine/__init__.py` — exports `load_experiment_config`
+- `src/portfolio_ninja/orchestrator.py` — `scoring_model_id: Optional[str] = None`; loads from config when not supplied; `config_path` optional param added
+- `tests/test_experiment_engine.py` — default assertion `"stub_v1"` → `"technical_composite_v1"`; unregistered model test added
+- `docs/contracts/experiment_engine.md` — default updated; `_REGISTERED_SCORING_MODELS` invariant; upstream provider added
+
+**Real output (scripts/run_pipeline.py, 2026-05-16):**
+```
+tickers: ['AAPL', 'ACN', 'AES', 'AI', 'ALAB']
+validation_status: valid
+Pipeline hashes: all 9 stages populated (64-char SHA-256)
+```
+
+**Full test suite: 263/263 PASS, 89.75% coverage. Commit: 491616d**
+
+**Next step:** Phase 6 — TBD by user.
+
+---
+
 ## Objective: SPY Regime Fix — COMPLETE
 
 ### Session 2026-05-16 (SPY benchmark path + adj_close fallback):
@@ -310,3 +347,7 @@ Summary: DateNormalizer implementation (22 tests, 86% coverage), RealAdapter int
 ### Auto-snapshot: 2026-05-16T21:14:00+08:00
 
 ### Auto-snapshot: 2026-05-16T21:41:58+08:00
+
+### Auto-snapshot: 2026-05-16T22:28:49+08:00
+
+### Auto-snapshot: 2026-05-16T22:44:53+08:00

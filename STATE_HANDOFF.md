@@ -1,45 +1,79 @@
 ---
 
-## Objective: Module 1 (Data Preparation) - Complete All Fixes — COMPLETE
+## Objective: DataPlane Runtime Validation + ScoringEngine technical_composite_v1 — COMPLETE
 
-## Status: All critical issues in Module 1 fixed. Test suite: 213/213 PASS (89.25% coverage).
+## Status: All three phases complete. Test suite: 232/232 PASS (89.62% coverage).
 
-## What's done (session 2026-05-16 Phase 5: Module 1 Fixes):
+## What's done (session 2026-05-16 Phase 1–3: Runtime Validation + ScoringEngine Upgrade):
 
-**Issue 1: CSV parsing lost date columns (FIXED)**
-- Root cause: `_load_csv_bars()` was filtering out unnamed columns which contain dates
-- Original code: `row = {k.strip().lower(): v.strip() for k, v in row.items() if k}`
-- This `if k` clause excluded empty string keys from csv.DictReader (assigned to unnamed columns)
-- Fix: Modified column normalization to explicitly check for and preserve unnamed columns:
-  ```python
-  for k, v in row.items():
-      if not k or not k.strip():
-          normalized["date"] = v.strip()  # preserve date from unnamed column
-      else:
-          normalized[k.strip().lower()] = v.strip()
-  ```
-- Result: test_real_adapter_fetches_nvda_and_msft now PASSES (was: only 0 bars loaded, minimum is 60)
+### Phase 1: DataPlane E2E Real Data Validation (10/10 tests PASS)
+- **Goal:** Confirm RealDataAdapter.fetch() produces valid MarketDataset from actual CSV files
+- **Key issue discovered:** CSV files have varying quality; window-based filtering (120 days) reduces usable bars
+  - Example: AAPL.csv has 128 CSV lines but only 29 valid bars in 120-day window (needs ≥60 minimum)
+  - Solution: Added _MIN_CSV_LINES = 300 threshold to filter for complete datasets
+  - Applied: _discover_tickers(n=20), _has_sufficient_bars() using line-count check
+- **Tests created:** tests/test_e2e_real_data.py
+  - test_e2e_real_data_market_dataset_returned — MarketDataset returned with validation_status="valid"
+  - test_e2e_real_data_all_tickers_covered — every ticker in universe has data
+  - test_e2e_real_data_each_ticker_has_minimum_bars — ≥21 OHLCV bars per ticker
+  - test_e2e_real_data_ohlcv_fields_are_decimal — all price fields are Decimal, high≥low, close>0
+  - test_e2e_real_data_params_hash_populated — SHA-256 hash present (64 hex chars)
+  - test_e2e_real_data_market_state_computes_from_real_bars — MarketStateEngine produces valid state
+  - test_e2e_real_data_market_state_features_are_decimal — momentum_20d, volatility_20d, rsi_14 are Decimal
+  - test_e2e_real_data_market_state_features_are_nonzero — volatility > 0, rsi in [0, 100]
+  - test_e2e_real_data_sentiment_is_decimal — news_sentiment is Decimal
+  - test_e2e_real_data_pe_ratio_is_decimal — pe_ratio is Decimal
+- **Result:** All 10 tests PASS with real CSV data from trading_data/
 
-**Issue 2: NaN comparisons raised InvalidOperation (FIXED)**
-- Root cause: Rows with completely missing OHLCV data generated Decimal("NaN") values
-- Code was filling missing open/high/low with close value, but if close was also NaN, bars had NaN
-- Then test assertion `bar.high >= bar.low` raised InvalidOperation on NaN comparison
-- Fix: Skip rows where close is NaN (completely empty OHLCV row):
-  ```python
-  if close != close:  # close is NaN
-      continue
-  ```
-- Result: test_real_adapter_ohlcv_integrity now PASSES (was: InvalidOperation)
+### Phase 2: ScoringEngine technical_composite_v1 Model (12/12 tests PASS)
+- **Goal:** Replace stub_v1 random scoring with real technical-factor composite
+- **ADR written:** docs/adr/0002-technical-composite-scoring.md (Status: Accepted)
+- **Model formula:** score = 0.4 × norm_momentum + 0.3 × (1 − norm_volatility) + 0.3 × norm_rsi
+  - Normalization: Cross-sectional min-max per run; if all values equal, return 0.5 for all tickers
+  - Arithmetic: Decimal only, no float
+  - Result: Clamped to [Decimal("0"), Decimal("1")]
+- **Implementation:** src/portfolio_ninja/scoring_engine/scoring_engine.py
+  - Added _minmax_normalize() helper for cross-sectional normalization
+  - Added _technical_composite_score() for factor-based scoring
+  - Updated _REGISTERED_MODELS to include "technical_composite_v1"
+  - Dispatch in score_tickers() on model_id
+- **Tests added:** tests/test_scoring_engine.py (4 new tests for technical_composite_v1)
+  - test_scoring_engine_technical_composite_v1_returns_real_scores — verifies [0,1] range and model_id propagation
+  - test_scoring_engine_technical_composite_v1_scores_differentiate_tickers — STRONG > WEAK > MID with real factors
+  - test_scoring_engine_technical_composite_v1_high_momentum_scores_higher — momentum signal isolated
+  - test_scoring_engine_technical_composite_v1_all_equal_features_return_half — degenerate case returns 0.5
+  - Plus 8 existing stub tests (all PASS)
+- **Contract updated:** docs/contracts/scoring_engine.md
+  - Added technical_composite_v1 to Invariants with step-by-step algorithm
+  - Documented min-max normalization and formula
+  - Status: implemented
+- **Result:** All 12 tests PASS; portfolio decisions now factor-driven instead of random
 
-**Issue 3: Contract status mismatch (FIXED)**
-- DateNormalizer contract had Status: approved but CONTRACT_INDEX.md listed it as implemented
-- Fix: Updated docs/contracts/date_normalizer.md Status field to "implemented"
-- CONTRACT_INDEX.md now consistent
+### Phase 3: Full E2E Pipeline with Real Data (5/5 tests PASS)
+- **Goal:** Run orchestrator.run() end-to-end with RealDataAdapter + technical_composite_v1
+- **Key issue:** test_e2e_pipeline.py had separate fixture with old _MIN_BARS_ADAPTER = 60 threshold
+- **Fix applied:** Unified fixture filtering with Phase 1
+  - Changed _MIN_CSV_LINES to 300
+  - Updated _discover_tickers(n=20) and _has_sufficient_bars() threshold
+  - Updated skip messages
+- **Tests created:** tests/test_e2e_pipeline.py
+  - test_e2e_pipeline_returns_audit_record — AuditRecord returned with validation_status="valid"
+  - test_e2e_pipeline_all_hashes_populated — pipeline_hashes keys: universe, market_dataset, market_state, experiment_params, score_set, ranked_universe, target_portfolio, risk_decision, execution_intent
+  - test_e2e_pipeline_operator_report_is_non_empty — render_report() produces output
+  - test_e2e_pipeline_scores_differentiate_tickers — scores vary across tickers (not all equal)
+  - test_e2e_pipeline_stub_model_still_works_with_real_data — regression test for stub_v1 with real data
+- **Result:** All 5 tests PASS with real CSV data
 
-**Test Results:**
-- Module 1 tests: 31/31 PASS in test_real_adapter.py
-- Full test suite: 213/213 PASS
-- Coverage: 89.25% (exceeds 80% threshold)
+### Final Coverage Report
+```
+Total: 232 tests PASS
+Coverage: 89.62% (exceeds 80% threshold)
+Key modules: scoring_engine.py 98%, orchestrator.py 100%, domain/objects.py 99%
+```
+
+## Prior work (session 2026-05-16 Phases 1–5: Module 1 Data Preparation)
+
+Summary: DateNormalizer implementation (22 tests, 86% coverage), RealAdapter integration with force-fresh re-download, and 3 critical DataPlane fixes (CSV date parsing, NaN handling, contract status). Full suite: 213/213 PASS (89.25% coverage).
 
 ## Prior work (session 2026-05-16 Phases 1–3):
 
@@ -74,44 +108,31 @@
   - Force-fresh re-download overwrites corrupted CSVs cleanly
 ```
 
-## Implementation Details
+## Completion Status
 
-**date_normalizer.py pipeline:**
-1. Sample first 40 rows; check if any token > 12 (unambiguous)
-2. If all tokens ≤ 12, compute monotonic score on sample; tie-break by parse count
-3. Parse all rows with detected format
-4. Find fault lines (backwards date jumps)
-5. For each fault: try alternate format on ±30 row window; only fix if alternate scores ≥ 0.95
-6. If any fault unresolvable: set needs_redownload=True, return early (file unchanged)
-7. Otherwise: deduplicate (keep last), filter future rows, sort, atomically write
+**DataPlane Runtime Validation + ScoringEngine Upgrade: COMPLETE**
+- ✓ Phase 1 E2E: 10/10 tests PASS (test_e2e_real_data.py)
+- ✓ Phase 2 ScoringEngine: 12/12 tests PASS (test_scoring_engine.py: 8 stub + 4 technical_composite)
+- ✓ Phase 3 Pipeline: 5/5 tests PASS (test_e2e_pipeline.py)
+- ✓ Full test suite: 232/232 PASS
+- ✓ Coverage: 89.62% (exceeds 80% threshold)
+- ✓ ADR 0002 written (technical_composite_v1 decision)
+- ✓ Contracts updated: scoring_engine.md
+- ✓ No TODOs/FIXMEs in src/
+- ✓ Commit message: test(e2e): unify fixture filtering in test_e2e_pipeline
 
-**real_adapter integration:**
-- Lines 291-301: Pre-merge normalize with needs_redownload check
-- If needs_redownload=True, recursively call with force_fresh=True
-- Lines 325-330: force_fresh=True skips merge (existing = None)
-- Lines 345-349: Post-save normalize for sort/dedup/future-row cleanup
+**Key achievements:**
+- RealDataAdapter + MarketStateEngine now runtime-validated with real CSV data
+- ScoringEngine upgraded from random stub to real technical-factor composite
+- All 11 pipeline modules now produce meaningful factor-driven signals
+- Portfolio decisions based on (momentum, volatility, RSI) instead of random hash
 
-## Module 1 Completion Status
-
-**Module 1 (Data Preparation) is READY FOR DELIVERY:**
-- ✓ All 3 critical issues fixed
-- ✓ All tests pass (213/213)
-- ✓ Coverage ≥ 80% (89.25%)
-- ✓ No TODOs/FIXMEs in src/data_plane/
-- ✓ All contracts marked as "implemented"
-- ✓ CONTRACT_INDEX.md consistent
-- ✓ Real-world CSV data loads correctly (NVDA.csv with 72 valid bars + 56 invalid rows properly handled)
-
-**Ready for delivery:**
-- ConvertRealDataAdapter with date normalization, force-fresh re-download, and proper NaN handling
-- DateNormalizer with format detection, fault-line resolution, and data cleanup
-
-## Notes:
-- date_normalizer.py: stdlib csv only, no pandas (matches _load_csv_bars pattern)
-- Monotonic scoring: (count of non-decreasing pairs) / (total pairs - 1)
-- Confidence < 0.6 → logs warning, defaults to ISO
-- Atomic write: .tmp file → validate non-empty → os.replace()
-- Use conda env "portfolio_ninja"
+**Implementation notes:**
+- _MIN_CSV_LINES = 300 filters CSV files for sufficient complete bars in 120-day window
+- Cross-sectional min-max normalization: (v - min) / (max - min), 0.5 when all equal
+- Sealed-node architecture maintained: no cross-module contract changes
+- All arithmetic Decimal-only (no float in monetary/price paths)
+- Atomic writes via .tmp → os.replace() pattern
 
 ### Auto-snapshot: 2026-05-16
 
@@ -136,3 +157,9 @@
 ### Auto-snapshot: 2026-05-16T13:22:11+08:00
 
 ### Auto-snapshot: 2026-05-16T14:13:50+08:00
+
+### Auto-snapshot: 2026-05-16T16:46:20+08:00
+
+### Auto-snapshot: 2026-05-16T16:58:34+08:00
+
+### Auto-snapshot: 2026-05-16T17:11:43+08:00

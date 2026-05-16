@@ -27,6 +27,7 @@ implemented
 - `universe.as_of_date` is set to the current UTC date at time of call
 - `universe.params_hash` is a SHA-256 hex digest of `(sorted(tickers), run_mode, window_days)`
 - `universe.reason_codes` is an empty list on success
+- `universe.regime_tickers` always contains `"SPY"`; if caller includes `"SPY"` in `tickers`, SPY still appears in `regime_tickers` (and in `tickers` as a scored ticker)
 - Monetary values: Decimal only, never float
 - No external I/O; purely in-memory validation
 

@@ -11,6 +11,7 @@ implemented
 |------|------|--------|----------|-------------|
 | `ranked_universe` | `RankedUniverse` | ScoreArbitrationEngine | yes | All tickers sorted descending by score; must have `validation_status == "valid"` and at least one entry |
 | `experiment_params` | `ExperimentParams` | ExperimentEngine (side-input) | yes | `top_n` controls how many tickers are selected; must have `validation_status == "valid"` |
+| `regime` | `str` | MarketStateEngine (via orchestrator) | no | `"EXPANSION"` (default) or `"CONTRACTION"`; controls `max_longs` cap |
 
 ## Outputs
 | Name | Type | Consumer | Description |
@@ -23,7 +24,9 @@ implemented
 - `ExperimentEngine` — must have approved contract; provides `ExperimentParams`
 
 ## Invariants
-- `target_portfolio.weights` contains exactly `min(experiment_params.top_n, len(ranked_universe.ranked))` tickers
+- `max_longs = 3` when `regime == "CONTRACTION"`, `max_longs = 5` otherwise (EXPANSION or default)
+- `n = min(experiment_params.top_n, max_longs, len(ranked_universe.ranked))`
+- `target_portfolio.weights` contains exactly `n` tickers
 - If `len(ranked_universe.ranked) < experiment_params.top_n`, all ranked tickers are selected (no error; `reason_codes` populated with `"top_n_capped:{actual}"`
 - Weight per ticker = `Decimal("1") / Decimal(str(n))` where `n` is the number of selected tickers
 - `sum(target_portfolio.weights.values()) == Decimal("1.0")` exactly; enforced by `validate()` raising `WeightSumError` otherwise
@@ -55,6 +58,8 @@ implemented
 - [ ] `test_portfolio_construction_engine_all_weights_are_decimal`
 - [ ] `test_portfolio_construction_engine_validation_status_is_valid_on_success`
 - [ ] `test_portfolio_construction_engine_top_n_capped_populates_reason_codes`
+- [ ] `test_portfolio_construction_engine_contraction_caps_at_3`
+- [ ] `test_portfolio_construction_engine_expansion_caps_at_5`
 
 ## Acceptance Criteria
 - [ ] Returns `TargetPortfolio` with exactly `min(top_n, len(ranked))` tickers

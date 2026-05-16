@@ -29,6 +29,8 @@ def create_universe(config: RunConfig, as_of_date: date | None = None) -> Univer
     ).encode()
     params_hash = hashlib.sha256(hash_input).hexdigest()
 
+    regime_tickers = ["SPY"]
+
     return Universe(
         tickers=unique_tickers,
         run_mode=config.run_mode,
@@ -37,4 +39,5 @@ def create_universe(config: RunConfig, as_of_date: date | None = None) -> Univer
         params_hash=params_hash,
         validation_status="valid",
         reason_codes=reason_codes,
+        regime_tickers=regime_tickers,
     )

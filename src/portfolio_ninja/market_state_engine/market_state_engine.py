@@ -97,9 +97,10 @@ def _scsi_from_sentiment(news_sentiment: Decimal) -> Decimal:
 
 def _regime_signal(dataset: MarketDataset) -> tuple[str, list[str]]:
     """SPY/200-SMA binary regime. Mined from regime_controller.py."""
-    if "SPY" not in dataset.data:
+    spy_td = dataset.regime_data.get("SPY")
+    if spy_td is None:
         return ("EXPANSION", ["regime_spy_missing"])
-    spy_closes = [bar.close for bar in dataset.data["SPY"].ohlcv]
+    spy_closes = [bar.close for bar in spy_td.ohlcv]
     if len(spy_closes) < 200:
         return ("EXPANSION", ["regime_spy_insufficient_bars"])
     sma_200 = sum(spy_closes[-200:]) / Decimal("200")

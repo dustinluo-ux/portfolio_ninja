@@ -111,6 +111,7 @@ class Universe:
     params_hash: str
     validation_status: str = "valid"
     reason_codes: list[str] = field(default_factory=list)
+    regime_tickers: list[str] = field(default_factory=list)
 
     def validate(self) -> None:
         if not self.tickers:
@@ -133,6 +134,7 @@ class MarketDataset:
     params_hash: str
     validation_status: str = "valid"
     reason_codes: list[str] = field(default_factory=list)
+    regime_data: dict = field(default_factory=dict)
 
     def validate(self) -> None:
         if not self.data:

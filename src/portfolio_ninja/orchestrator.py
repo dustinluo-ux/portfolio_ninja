@@ -36,7 +36,7 @@ def run(
     )
     score_set = score_tickers(market_state, experiment_params)
     ranked_universe = rank_scores(score_set)
-    target_portfolio = construct_portfolio(ranked_universe, experiment_params)
+    target_portfolio = construct_portfolio(ranked_universe, experiment_params, market_state.regime)
     risk_decision = evaluate_risk(target_portfolio)
     execution_intent = execute_orders(risk_decision, exec_adapter, run_mode)
     evaluation_report = evaluate_cycle(execution_intent)

@@ -41,6 +41,14 @@ implemented
 - `scsi` per-ticker: `(ticker_data.news_sentiment − Decimal("0.5")) × Decimal("0.693147180559945")`; no clamping; article_count=1 MVP stub (documented in ADR 0003)
 - `MarketState.validate()` checks `regime ∈ {"EXPANSION", "CONTRACTION"}`
 
+### Future Work: SCSI Full Activation
+Real formula: `stress_raw = (mean_sentiment − 0.5) × log(1 + article_count)`
+Activation requires a sealed-node ADR (changes `TickerData` and `DataPlane` contract):
+1. Add `article_count: int` to `TickerData` domain object
+2. Update `_load_sentiment_for_ticker()` in `real_adapter.py` to return `(mean_sentiment, count)` tuple
+3. Update `_scsi_from_sentiment(sentiment, article_count)` signature in `market_state_engine.py`
+4. Update `DataPlane` contract to reflect new `TickerData` field
+
 ## Failure Modes
 | Failure | Probability | Impact | Mitigation |
 |---------|-------------|--------|------------|

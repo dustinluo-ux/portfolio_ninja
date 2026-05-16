@@ -24,6 +24,24 @@ def fetch_market_data(universe: Universe, adapter: DataAdapter) -> MarketDataset
                     f"OHLCVBar integrity violation: high < low for {ticker} on {bar.date}"
                 )
 
+    regime_data: dict = {}
+    for ticker in universe.regime_tickers:
+        try:
+            regime_u = Universe(
+                tickers=[ticker],
+                run_mode=universe.run_mode,
+                window_days=universe.window_days,
+                as_of_date=universe.as_of_date,
+                params_hash=hashlib.sha256(
+                    f"{universe.params_hash}|regime|{ticker}".encode()
+                ).hexdigest(),
+            )
+            regime_ds = adapter.fetch(regime_u, universe.window_days)
+            if ticker in regime_ds.data:
+                regime_data[ticker] = regime_ds.data[ticker]
+        except Exception:
+            pass
+
     params_hash = hashlib.sha256(
         f"{universe.params_hash}|{dataset.source_data_version}".encode()
     ).hexdigest()
@@ -35,4 +53,5 @@ def fetch_market_data(universe: Universe, adapter: DataAdapter) -> MarketDataset
         params_hash=params_hash,
         validation_status="valid",
         reason_codes=[],
+        regime_data=regime_data,
     )

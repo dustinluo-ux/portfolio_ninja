@@ -47,6 +47,13 @@ Add three new fields to the domain objects:
 - No clamping; value range is unbounded (typically −0.35 to +0.35 for sentiment ∈ [0, 1])
 - Pure function with no external I/O
 
+### Future Work: SCSI Full Activation
+Full formula: `stress_raw = (mean_sentiment − 0.5) × log(1 + article_count)`. Requires a new sealed-node ADR (changes `TickerData` and `DataPlane` contract):
+1. Add `article_count: int` to `TickerData` domain object
+2. Update `_load_sentiment_for_ticker()` in `real_adapter.py` to return `(mean_sentiment, count)` tuple
+3. Update `_scsi_from_sentiment(sentiment, article_count)` signature in `market_state_engine.py`
+4. Update `DataPlane` contract to reflect new `TickerData` field
+
 ## Consequences
 
 - 8 files updated across domain objects, implementation, tests (unit + E2E)

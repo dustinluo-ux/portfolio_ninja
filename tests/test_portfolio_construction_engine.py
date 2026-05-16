@@ -1,6 +1,7 @@
-import pytest
 from datetime import date
 from decimal import Decimal
+
+import pytest
 
 from portfolio_ninja.domain.objects import ExperimentParams, RankedUniverse
 from portfolio_ninja.portfolio_construction_engine import construct_portfolio
@@ -97,3 +98,19 @@ def test_portfolio_construction_engine_top_n_capped_populates_reason_codes():
     ep = _make_ep(top_n=5)
     tp = construct_portfolio(ru, ep)
     assert any("top_n_capped" in rc for rc in tp.reason_codes)
+
+
+def test_portfolio_construction_engine_contraction_caps_at_3():
+    tickers = [(f"T{i}", str(1.0 - i * 0.05)) for i in range(6)]
+    ru = _make_ranked(tickers)
+    ep = _make_ep(top_n=6)
+    tp = construct_portfolio(ru, ep, regime="CONTRACTION")
+    assert len(tp.weights) == 3
+
+
+def test_portfolio_construction_engine_expansion_caps_at_5():
+    tickers = [(f"T{i}", str(1.0 - i * 0.05)) for i in range(7)]
+    ru = _make_ranked(tickers)
+    ep = _make_ep(top_n=7)
+    tp = construct_portfolio(ru, ep, regime="EXPANSION")
+    assert len(tp.weights) == 5

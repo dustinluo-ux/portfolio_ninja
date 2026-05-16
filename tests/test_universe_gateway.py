@@ -1,5 +1,6 @@
-import pytest
 from datetime import date
+
+import pytest
 
 from portfolio_ninja.domain.objects import RunConfig
 from portfolio_ninja.universe_gateway import create_universe
@@ -61,3 +62,16 @@ def test_universe_gateway_params_hash_is_deterministic_for_same_inputs():
 def test_universe_gateway_validation_status_is_valid_on_success():
     u = create_universe(VALID_CONFIG, as_of_date=TODAY)
     assert u.validation_status == "valid"
+
+
+def test_universe_gateway_spy_injected_into_regime_tickers():
+    u = create_universe(VALID_CONFIG, as_of_date=TODAY)
+    assert "SPY" in u.regime_tickers
+    assert "SPY" not in u.tickers
+
+
+def test_universe_gateway_spy_already_in_tickers_still_in_regime_tickers():
+    config = RunConfig(tickers=["SPY", "AAPL"], run_mode="backtest", window_days=730)
+    u = create_universe(config, as_of_date=TODAY)
+    assert "SPY" in u.regime_tickers
+    assert "SPY" in u.tickers

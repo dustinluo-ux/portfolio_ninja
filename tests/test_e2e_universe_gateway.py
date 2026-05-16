@@ -8,7 +8,7 @@ Verifies:
 Tests skip if the trading data directory is absent (CI without local data).
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 
@@ -76,6 +76,7 @@ def test_e2e_universe_gateway_valid_universe_from_real_tickers(real_tickers):
     assert len(universe.params_hash) == 64
     assert universe.as_of_date == date.today()
     assert universe.reason_codes == []
+    assert "SPY" in universe.regime_tickers
 
 
 def test_e2e_universe_gateway_hash_is_deterministic(real_tickers):

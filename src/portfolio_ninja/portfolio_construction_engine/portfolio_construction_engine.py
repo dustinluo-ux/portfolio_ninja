@@ -6,9 +6,14 @@ from portfolio_ninja.domain.objects import ExperimentParams, RankedUniverse, Tar
 _ONE = Decimal("1")
 
 
+_CONTRACTION_MAX_LONGS = 3
+_EXPANSION_MAX_LONGS = 5
+
+
 def construct_portfolio(
     ranked_universe: RankedUniverse,
     experiment_params: ExperimentParams,
+    regime: str = "EXPANSION",
 ) -> TargetPortfolio:
     if not ranked_universe.ranked:
         raise ValueError("RankedUniverse must not be empty")
@@ -17,7 +22,8 @@ def construct_portfolio(
 
     reason_codes: list[str] = []
     available = len(ranked_universe.ranked)
-    n = min(experiment_params.top_n, available)
+    max_longs = _CONTRACTION_MAX_LONGS if regime == "CONTRACTION" else _EXPANSION_MAX_LONGS
+    n = min(experiment_params.top_n, max_longs, available)
     if n < experiment_params.top_n:
         reason_codes.append(f"top_n_capped:{n}")
 

@@ -1,5 +1,29 @@
 ---
 
+## Objective: SPY Regime Fix — COMPLETE
+
+### Session 2026-05-16 (SPY benchmark path + adj_close fallback):
+
+**Problem:** `regime_spy_missing` / `regime_spy_insufficient_bars` — SPY.csv in `benchmarks/` was never found because `CSV_SUBDIRS` only covers `stock_market_data/` subdirs, and even when found, the benchmarks CSV format has empty OHLCV columns with only `adj_close` populated.
+
+**Fix applied (`src/portfolio_ninja/data_plane/real_adapter.py`):**
+- Added `_BENCHMARK_BASE = Path("C:/portfolio_ninja/trading_data/benchmarks")`
+- Extended `_find_csv_path()` with `flat_dirs: Optional[list[Path]] = None` parameter
+- `_ensure_ohlcv()` now passes `flat_dirs=[_BENCHMARK_BASE]`
+- `_load_csv_bars()`: close fallback changed from `"Close"` to `"adj_close"` — SPY-format CSVs now load cleanly
+
+**E2E verification (scripts/_sample_market_state.py, window=730d):**
+```
+regime:       EXPANSION
+reason_codes: []         ← clean; 200-SMA computed from real SPY bars
+```
+
+**Full test suite: 253/253 PASS, 89.52% coverage. Commit: 6ff12df**
+
+**Next step:** Phase 5 — TBD by user.
+
+---
+
 ## Objective: SPY Auto-Inject + PCE Regime Max Longs + SCSI Docs — COMPLETE
 
 ### Session 2026-05-16 (SPY auto-inject, PCE regime max_longs, SCSI docs):
@@ -284,3 +308,5 @@ Summary: DateNormalizer implementation (22 tests, 86% coverage), RealAdapter int
 ### Auto-snapshot: 2026-05-16T21:09:08+08:00
 
 ### Auto-snapshot: 2026-05-16T21:14:00+08:00
+
+### Auto-snapshot: 2026-05-16T21:41:58+08:00

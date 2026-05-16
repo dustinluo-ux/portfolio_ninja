@@ -1,15 +1,19 @@
-import pytest
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+
+from portfolio_ninja.data_plane import fetch_market_data
+from portfolio_ninja.domain.exceptions import InsufficientDataError
 from portfolio_ninja.domain.objects import (
-    MarketDataset, OHLCVBar, RunConfig, TickerData,
+    MarketDataset,
+    OHLCVBar,
+    RunConfig,
+    TickerData,
 )
 from portfolio_ninja.domain.stubs import StubDataAdapter
-from portfolio_ninja.domain.exceptions import InsufficientDataError
 from portfolio_ninja.market_state_engine import compute_market_state
 from portfolio_ninja.universe_gateway import create_universe
-from portfolio_ninja.data_plane import fetch_market_data
 
 TODAY = date(2026, 1, 15)
 VALID_CONFIG = RunConfig(tickers=["AAPL", "MSFT"], run_mode="backtest", window_days=730)
@@ -76,6 +80,8 @@ def test_market_state_engine_all_feature_values_are_decimal():
         assert isinstance(tf.momentum_20d, Decimal)
         assert isinstance(tf.volatility_20d, Decimal)
         assert isinstance(tf.rsi_14, Decimal)
+        assert isinstance(tf.volatility_ewma, Decimal)
+        assert isinstance(tf.scsi, Decimal)
 
 
 def test_market_state_engine_insufficient_bars_raises_insufficient_data_error():
@@ -128,3 +134,30 @@ def test_market_state_engine_params_hash_is_deterministic():
     ms1 = compute_market_state(ds)
     ms2 = compute_market_state(ds)
     assert ms1.params_hash == ms2.params_hash
+
+
+def test_market_state_engine_volatility_ewma_is_nonneg():
+    ds = _make_dataset()
+    ms = compute_market_state(ds)
+    for tf in ms.features.values():
+        assert tf.volatility_ewma >= Decimal("0")
+
+
+def test_market_state_engine_scsi_sign_matches_sentiment():
+    high_sent = _make_dataset_with_bars({"X": 25})
+    high_sent.data["X"].news_sentiment = Decimal("0.7")
+    low_sent = _make_dataset_with_bars({"X": 25})
+    low_sent.data["X"].news_sentiment = Decimal("0.3")
+    neutral_sent = _make_dataset_with_bars({"X": 25})
+    neutral_sent.data["X"].news_sentiment = Decimal("0.5")
+
+    assert compute_market_state(high_sent).features["X"].scsi > Decimal("0")
+    assert compute_market_state(low_sent).features["X"].scsi < Decimal("0")
+    assert compute_market_state(neutral_sent).features["X"].scsi == Decimal("0")
+
+
+def test_market_state_engine_regime_defaults_to_expansion_without_spy():
+    ds = _make_dataset_with_bars({"AAPL": 25})
+    ms = compute_market_state(ds)
+    assert ms.regime == "EXPANSION"
+    assert "regime_spy_missing" in ms.reason_codes

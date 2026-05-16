@@ -1,7 +1,7 @@
 # Contract: MarketStateEngine
 
 ## Purpose
-Compute per-ticker technical features (20-day momentum, 20-day volatility, 14-day RSI) from a `MarketDataset`; emit a typed, lineage-annotated `MarketState`.
+Compute per-ticker technical features (20-day momentum, 20-day volatility, 14-day RSI, EWMA volatility span=38, SCSI sentiment stress) and market regime (SPY/200-SMA binary) from a `MarketDataset`; emit a typed, lineage-annotated `MarketState`.
 
 ## Status
 implemented
@@ -14,7 +14,10 @@ implemented
 ## Outputs
 | Name | Type | Consumer | Description |
 |------|------|----------|-------------|
-| `market_state` | `MarketState` | ScoringEngine | Per-ticker `TickerFeatures` (momentum, volatility, RSI) for every ticker in the dataset |
+| `market_state` | `MarketState` | ScoringEngine | Per-ticker `TickerFeatures` (momentum, volatility, RSI, volatility_ewma, scsi) + market `regime` for every ticker in the dataset |
+| `regime` (on `MarketState`) | `str` | ScoringEngine | "EXPANSION" or "CONTRACTION"; defaults to "EXPANSION" + reason_code when SPY absent |
+| `volatility_ewma` (on `TickerFeatures`) | `Decimal` | ScoringEngine | EWMA std dev of returns, span=38 (λ≈0.94); ≥ Decimal("0") |
+| `scsi` (on `TickerFeatures`) | `Decimal` | ScoringEngine | Stress signal: (news_sentiment − 0.5) × ln(2); MVP article_count=1 |
 
 ## Dependencies
 - `domain` — provides `MarketDataset`, `MarketState`, `TickerFeatures`, `OHLCVBar` types
@@ -30,9 +33,13 @@ implemented
 - `market_state.validation_status == "valid"` on successful exit
 - `market_state.as_of_date == dataset.as_of_date`
 - `market_state.params_hash` is SHA-256 hex of `(dataset.params_hash, "market_state_engine_v1")`
-- `market_state.reason_codes` is an empty list on success
+- `market_state.reason_codes` is an empty list when regime can be computed and no RSI clamping occurs
 - Monetary values: Decimal only, never float
 - No external I/O; purely in-memory computation
+- `regime ∈ {"EXPANSION", "CONTRACTION"}`; if SPY not in `dataset.data`, regime="EXPANSION", reason_code="regime_spy_missing"; if SPY has <200 bars, reason_code="regime_spy_insufficient_bars"
+- `volatility_ewma ≥ Decimal("0")`; requires ≥ 2 bars; returns `Decimal("0")` if all returns are zero
+- `scsi` per-ticker: `(ticker_data.news_sentiment − Decimal("0.5")) × Decimal("0.693147180559945")`; no clamping; article_count=1 MVP stub (documented in ADR 0003)
+- `MarketState.validate()` checks `regime ∈ {"EXPANSION", "CONTRACTION"}`
 
 ## Failure Modes
 | Failure | Probability | Impact | Mitigation |
@@ -42,6 +49,8 @@ implemented
 | Division by zero in momentum (prior close == 0) | L | H | Raises `DataIntegrityError("close price is zero for ticker {ticker} at {date}")` |
 | Ticker missing from `dataset.data` during iteration | L | H | Raises `KeyError(f"ticker {ticker} not found in MarketDataset")` |
 | RSI computation produces value outside [0, 100] due to floating-point intermediate | L | M | Clamp to `[Decimal("0"), Decimal("100")]` after conversion; populate `reason_codes` with `"rsi_clamped:{ticker}"` |
+| SPY absent from dataset (regime) | H | L | Default "EXPANSION" + reason_code "regime_spy_missing" |
+| SPY has <200 bars (regime) | M | L | Default "EXPANSION" + reason_code "regime_spy_insufficient_bars" |
 
 ## Tests Required
 - [ ] `test_market_state_engine_valid_dataset_returns_complete_market_state`
@@ -53,6 +62,9 @@ implemented
 - [ ] `test_market_state_engine_volatility_20d_computed_correctly`
 - [ ] `test_market_state_engine_validation_status_is_valid_on_success`
 - [ ] `test_market_state_engine_params_hash_is_deterministic`
+- [ ] `test_market_state_engine_volatility_ewma_is_nonneg`
+- [ ] `test_market_state_engine_scsi_sign_matches_sentiment`
+- [ ] `test_market_state_engine_regime_defaults_to_expansion_without_spy`
 
 ## Acceptance Criteria
 - [ ] Returns `MarketState` with an entry in `features` for every ticker in `dataset.data`

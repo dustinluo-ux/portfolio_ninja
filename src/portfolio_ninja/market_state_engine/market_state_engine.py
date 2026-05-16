@@ -6,6 +6,9 @@ from portfolio_ninja.domain.objects import MarketDataset, MarketState, TickerFea
 
 _ZERO = Decimal("0")
 _HUNDRED = Decimal("100")
+_EWMA_ALPHA = Decimal("2") / Decimal("39")   # span=38; mined from pods/pod_core.py EWMA_SPAN=38
+_EWMA_LAMBDA = Decimal("1") - _EWMA_ALPHA
+_LN2 = Decimal("0.693147180559945")           # ln(2), pre-computed; used in SCSI formula
 
 
 def _momentum_20d(closes: list[Decimal], ticker: str) -> Decimal:
@@ -66,21 +69,65 @@ def _rsi_14(closes: list[Decimal], ticker: str) -> tuple[Decimal, bool]:
     return rsi.quantize(Decimal("0.0001")), clamped
 
 
+def _volatility_ewma(closes: list[Decimal], ticker: str) -> Decimal:
+    """EWMA std dev of daily returns, span=38 (α=2/39). Mined from pods/pod_core.py."""
+    if len(closes) < 2:
+        raise InsufficientDataError(
+            f"insufficient_bars:{ticker}:needed:2:got:{len(closes)}"
+        )
+    returns = []
+    for i in range(1, len(closes)):
+        if closes[i - 1] != _ZERO:
+            returns.append((closes[i] - closes[i - 1]) / closes[i - 1])
+    if not returns:
+        return _ZERO
+    var = returns[0] ** 2
+    for r in returns[1:]:
+        var = _EWMA_LAMBDA * var + _EWMA_ALPHA * r ** 2
+    if var <= _ZERO:
+        return _ZERO
+    return var.sqrt().quantize(Decimal("0.000001"))
+
+
+def _scsi_from_sentiment(news_sentiment: Decimal) -> Decimal:
+    """Stress Composite Signal Index. Mined from feature_engineering.py L44-48.
+    MVP: article_count=1 → formula simplifies to (sentiment - 0.5) × ln(2)."""
+    return ((news_sentiment - Decimal("0.5")) * _LN2).quantize(Decimal("0.000001"))
+
+
+def _regime_signal(dataset: MarketDataset) -> tuple[str, list[str]]:
+    """SPY/200-SMA binary regime. Mined from regime_controller.py."""
+    if "SPY" not in dataset.data:
+        return ("EXPANSION", ["regime_spy_missing"])
+    spy_closes = [bar.close for bar in dataset.data["SPY"].ohlcv]
+    if len(spy_closes) < 200:
+        return ("EXPANSION", ["regime_spy_insufficient_bars"])
+    sma_200 = sum(spy_closes[-200:]) / Decimal("200")
+    last_close = spy_closes[-1]
+    regime = "EXPANSION" if last_close >= sma_200 else "CONTRACTION"
+    return (regime, [])
+
+
 def compute_market_state(dataset: MarketDataset) -> MarketState:
+    regime, regime_reason_codes = _regime_signal(dataset)
     features: dict[str, TickerFeatures] = {}
-    reason_codes: list[str] = []
+    reason_codes: list[str] = list(regime_reason_codes)
 
     for ticker, ticker_data in dataset.data.items():
         closes = [bar.close for bar in ticker_data.ohlcv]
         mom = _momentum_20d(closes, ticker)
         vol = _volatility_20d(closes, ticker)
         rsi, clamped = _rsi_14(closes, ticker)
+        ewma_vol = _volatility_ewma(closes, ticker)
+        scsi = _scsi_from_sentiment(ticker_data.news_sentiment)
         if clamped:
             reason_codes.append(f"rsi_clamped:{ticker}")
         features[ticker] = TickerFeatures(
             momentum_20d=mom,
             volatility_20d=vol,
             rsi_14=rsi,
+            volatility_ewma=ewma_vol,
+            scsi=scsi,
         )
 
     params_hash = hashlib.sha256(
@@ -91,6 +138,7 @@ def compute_market_state(dataset: MarketDataset) -> MarketState:
         features=features,
         as_of_date=dataset.as_of_date,
         params_hash=params_hash,
+        regime=regime,
         validation_status="valid",
         reason_codes=reason_codes,
     )

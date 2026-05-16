@@ -62,6 +62,8 @@ def _valid_ticker_features(rsi: Decimal = Decimal("55.0")) -> TickerFeatures:
         momentum_20d=Decimal("0.03"),
         volatility_20d=Decimal("0.02"),
         rsi_14=rsi,
+        volatility_ewma=Decimal("0.01"),
+        scsi=Decimal("0.0"),
     )
 
 
@@ -217,6 +219,7 @@ def test_domain_market_state_validate_valid_state_passes() -> None:
         features={"AAPL": _valid_ticker_features()},
         as_of_date=TODAY,
         params_hash=TEST_HASH,
+        regime="EXPANSION",
     )
     ms.validate()  # must not raise
 
@@ -226,6 +229,7 @@ def test_domain_market_state_validate_rsi_out_of_range_raises_value_error() -> N
         features={"AAPL": _valid_ticker_features(rsi=Decimal("101"))},
         as_of_date=TODAY,
         params_hash=TEST_HASH,
+        regime="EXPANSION",
     )
     with pytest.raises(ValueError, match="rsi_14"):
         ms.validate()
@@ -236,6 +240,7 @@ def test_domain_market_state_validate_empty_features_raises_value_error() -> Non
         features={},
         as_of_date=TODAY,
         params_hash=TEST_HASH,
+        regime="EXPANSION",
     )
     with pytest.raises(ValueError, match="features"):
         ms.validate()
@@ -246,6 +251,7 @@ def test_domain_market_state_validate_empty_params_hash_raises_value_error() -> 
         features={"AAPL": _valid_ticker_features()},
         as_of_date=TODAY,
         params_hash="",
+        regime="EXPANSION",
     )
     with pytest.raises(ValueError, match="params_hash"):
         ms.validate()
@@ -256,6 +262,7 @@ def test_domain_market_state_validate_invalid_status_raises_value_error() -> Non
         features={"AAPL": _valid_ticker_features()},
         as_of_date=TODAY,
         params_hash=TEST_HASH,
+        regime="EXPANSION",
         validation_status="unknown",
     )
     with pytest.raises(ValueError, match="validation_status"):

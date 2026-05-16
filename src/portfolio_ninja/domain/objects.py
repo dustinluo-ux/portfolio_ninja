@@ -74,10 +74,14 @@ class TickerFeatures:
     momentum_20d: Decimal
     volatility_20d: Decimal
     rsi_14: Decimal
+    volatility_ewma: Decimal  # EWMA vol span=38 (λ≈0.94); mined from pods/pod_core.py EWMA_SPAN=38
+    scsi: Decimal             # Stress signal from news_sentiment; mined from feature_engineering.py L44-48
 
     def validate(self) -> None:
         if not (Decimal("0") <= self.rsi_14 <= Decimal("100")):
             raise ValueError(f"rsi_14 must be in [0, 100], got {self.rsi_14}")
+        if self.volatility_ewma < Decimal("0"):
+            raise ValueError(f"volatility_ewma must be >= 0, got {self.volatility_ewma}")
 
 
 @dataclass
@@ -146,6 +150,7 @@ class MarketState:
     features: dict[str, TickerFeatures]
     as_of_date: date
     params_hash: str
+    regime: str               # "EXPANSION" | "CONTRACTION"; mined from regime_controller.py
     validation_status: str = "valid"
     reason_codes: list[str] = field(default_factory=list)
 
@@ -154,6 +159,8 @@ class MarketState:
             raise ValueError("MarketState.features must not be empty")
         if not self.params_hash:
             raise ValueError("MarketState.params_hash must not be empty")
+        if self.regime not in ("EXPANSION", "CONTRACTION"):
+            raise ValueError(f"regime must be 'EXPANSION' or 'CONTRACTION', got {self.regime!r}")
         for ticker, f in self.features.items():
             f.validate()
         if self.validation_status not in ("valid", "invalid"):

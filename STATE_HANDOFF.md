@@ -21,7 +21,12 @@ conda run -n portfolio_ninja python -m pytest --cov=src --cov-report=term-missin
 conda run -n portfolio_ninja python scripts/run_pipeline.py
 ```
 
-**Next step:** Phase 7 — TBD by user.
+**Status:** COMPLETE
+**Commits:** 
+- f96d65b feat(params): centralize algorithm parameters to config/params.yaml
+- 7d76ac0 refactor(modules): wire params_loader into 4 sealed-node modules
+
+**Next step:** Phase 8 — TBD by user.
 
 ---
 
@@ -368,56 +373,3 @@ Summary: DateNormalizer implementation (22 tests, 86% coverage), RealAdapter int
 - All arithmetic Decimal-only (no float in monetary/price paths)
 - Atomic writes via .tmp → os.replace() pattern
 
-### Auto-snapshot: 2026-05-16
-
-### Auto-snapshot: 2026-05-16T11:13:04+08:00
-
-### Auto-snapshot: 2026-05-16T11:35:43+08:00
-
-### Auto-snapshot: 2026-05-16T11:46:12+08:00
-
-### Auto-snapshot: 2026-05-16T11:52:35+08:00
-
-### Auto-snapshot: 2026-05-16T11:58:53+08:00
-
-### Auto-snapshot: 2026-05-16T12:09:52+08:00
-
-### Auto-snapshot: 2026-05-16T12:15:28+08:00
-
-### Auto-snapshot: 2026-05-16T12:31:08+08:00
-
-### Auto-snapshot: 2026-05-16T12:46:53+08:00
-
-### Auto-snapshot: 2026-05-16T13:22:11+08:00
-
-### Auto-snapshot: 2026-05-16T14:13:50+08:00
-
-### Auto-snapshot: 2026-05-16T16:46:20+08:00
-
-### Auto-snapshot: 2026-05-16T16:58:34+08:00
-
-### Auto-snapshot: 2026-05-16T17:11:43+08:00
-
-### Auto-snapshot: 2026-05-16T17:41:23+08:00
-
-### Auto-snapshot: 2026-05-16T17:58:48+08:00
-
-### Auto-snapshot: 2026-05-16T18:36:33+08:00
-
-### Auto-snapshot: 2026-05-16T18:43:55+08:00
-
-### Auto-snapshot: 2026-05-16T18:57:05+08:00
-
-### Auto-snapshot: 2026-05-16T20:46:07+08:00
-
-### Auto-snapshot: 2026-05-16T21:09:08+08:00
-
-### Auto-snapshot: 2026-05-16T21:14:00+08:00
-
-### Auto-snapshot: 2026-05-16T21:41:58+08:00
-
-### Auto-snapshot: 2026-05-16T22:28:49+08:00
-
-### Auto-snapshot: 2026-05-16T22:44:53+08:00
-
-### Auto-snapshot: 2026-05-17T10:51:39+08:00

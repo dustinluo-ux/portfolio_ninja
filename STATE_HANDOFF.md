@@ -1,5 +1,48 @@
 ---
 
+## Objective: ScoringEngine End-to-End Audit — COMPLETE
+
+### Session 2026-05-17 (ScoringEngine: end-to-end audit + visible score evidence):
+
+**Audit finding:** ScoringEngine was already fully implemented from prior session. No stubs, mocks, or placeholders found in the scoring path.
+
+**One gap closed:** `scripts/run_pipeline.py` called `orchestrator.run()` as a black box and showed only hashes — actual scores were not visible. Refactored to call pipeline steps individually, exposing per-ticker feature values, actual scores, rank order, portfolio weights, and timestamps.
+
+**Real runtime evidence (2026-05-17):**
+```
+Ticker features (real CSV data, 120-day window):
+  AAPL     momentum_20d=+0.1332  vol_20d=0.0148  rsi_14=81.00
+  ACN      momentum_20d=-0.1547  vol_20d=0.0247  rsi_14=33.73
+  AES      momentum_20d=+0.0343  vol_20d=0.0031  rsi_14=69.05
+  AI       momentum_20d=+0.0397  vol_20d=0.0455  rsi_14=48.25
+  ALAB     momentum_20d=+0.8735  vol_20d=0.0577  rsi_14=98.69
+
+technical_composite_v1 scores:
+  ALAB  0.700000  (high momentum + high RSI)
+  AAPL  0.565864
+  AES   0.536616
+  AI    0.209303
+  ACN   0.181107  (negative momentum + low RSI)
+
+Rank order: ['ALAB', 'AAPL', 'AES', 'AI', 'ACN']
+validation_status: valid
+completed_at: 2026-05-17T02:14:37.556842+00:00
+```
+
+**Dummy/stub inventory (zero remaining):**
+- `stub_v1` model: registered contract model, used in regression tests only
+- `StubExecutionAdapter`: contractually appropriate for backtest mode (no live broker)
+- `EvaluationReport.pnl=Decimal("0")`: contract-specified MVP stub, documented in EvaluationEngine contract
+
+**Files changed:**
+- `scripts/run_pipeline.py` — step-by-step execution, shows ticker features + scores + rank + weights + timestamps
+
+**Full test suite: 263/263 PASS, 89.75% coverage. Commit: TBD**
+
+**Next step:** Phase 7 — TBD by user.
+
+---
+
 ## Objective: ExperimentEngine End-to-End — COMPLETE
 
 ### Session 2026-05-16 (ExperimentEngine: config-driven defaults, real model, production CLI):

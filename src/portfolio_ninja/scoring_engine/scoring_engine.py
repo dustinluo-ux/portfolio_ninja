@@ -1,18 +1,21 @@
 import hashlib
 from decimal import Decimal
 
+from portfolio_ninja.config.params_loader import load_params
 from portfolio_ninja.domain.exceptions import UnknownModelError
 from portfolio_ninja.domain.objects import ExperimentParams, MarketState, ScoreSet
 
 _ZERO = Decimal("0")
 _ONE = Decimal("1")
-_HALF = Decimal("0.5")
 _THOUSAND = Decimal("1000")
 _HUNDRED = Decimal("100")
 
-_W_MOM = Decimal("0.4")
-_W_VOL = Decimal("0.3")
-_W_RSI = Decimal("0.3")
+_p = load_params()["scoring"]
+_HALF = Decimal(str(_p["degenerate_score"]))
+_W_MOM = Decimal(str(_p["w_momentum"]))
+_W_VOL = Decimal(str(_p["w_volatility"]))
+_W_RSI = Decimal(str(_p["w_rsi"]))
+del _p
 
 _REGISTERED_MODELS = {"stub_v1", "technical_composite_v1"}
 

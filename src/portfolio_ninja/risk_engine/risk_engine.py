@@ -1,11 +1,12 @@
 import hashlib
 from decimal import Decimal
 
+from portfolio_ninja.config.params_loader import load_params
 from portfolio_ninja.domain.exceptions import WeightSumError
 from portfolio_ninja.domain.objects import RiskDecision, TargetPortfolio
 
 _ONE = Decimal("1.0")
-_CONCENTRATION_LIMIT = Decimal("0.25")
+_CONCENTRATION_LIMIT = Decimal(str(load_params()["risk"]["concentration_limit"]))
 
 
 def evaluate_risk(target_portfolio: TargetPortfolio) -> RiskDecision:

@@ -1,35 +1,44 @@
 import hashlib
 from decimal import Decimal
 
+from portfolio_ninja.config.params_loader import load_params
 from portfolio_ninja.domain.exceptions import DataIntegrityError, InsufficientDataError
 from portfolio_ninja.domain.objects import MarketDataset, MarketState, TickerFeatures
 
 _ZERO = Decimal("0")
 _HUNDRED = Decimal("100")
-_EWMA_ALPHA = Decimal("2") / Decimal("39")   # span=38; mined from pods/pod_core.py EWMA_SPAN=38
+_LN2 = Decimal("0.693147180559945")  # ln(2), pre-computed
+
+_p = load_params()["market_state"]
+_MOMENTUM_PERIOD: int = _p["momentum_period"]
+_RSI_PERIOD: int = _p["rsi_period"]
+_SMA_REGIME_PERIOD: int = _p["sma_regime_period"]
+_EWMA_SPAN: int = _p["ewma_span"]
+_EWMA_ALPHA = Decimal("2") / Decimal(str(_EWMA_SPAN + 1))
 _EWMA_LAMBDA = Decimal("1") - _EWMA_ALPHA
-_LN2 = Decimal("0.693147180559945")           # ln(2), pre-computed; used in SCSI formula
+_SCSI_BASELINE = Decimal(str(_p["scsi_sentiment_baseline"]))
+del _p
 
 
 def _momentum_20d(closes: list[Decimal], ticker: str) -> Decimal:
-    if len(closes) < 21:
+    if len(closes) < _MOMENTUM_PERIOD + 1:
         raise InsufficientDataError(
-            f"insufficient_bars:{ticker}:needed:21:got:{len(closes)}"
+            f"insufficient_bars:{ticker}:needed:{_MOMENTUM_PERIOD + 1}:got:{len(closes)}"
         )
-    prior = closes[-21]
+    prior = closes[-(_MOMENTUM_PERIOD + 1)]
     if prior == _ZERO:
         raise DataIntegrityError(f"close price is zero for ticker {ticker}")
     return (closes[-1] - prior) / prior
 
 
 def _volatility_20d(closes: list[Decimal], ticker: str) -> Decimal:
-    if len(closes) < 21:
+    if len(closes) < _MOMENTUM_PERIOD + 1:
         raise InsufficientDataError(
-            f"insufficient_bars:{ticker}:needed:21:got:{len(closes)}"
+            f"insufficient_bars:{ticker}:needed:{_MOMENTUM_PERIOD + 1}:got:{len(closes)}"
         )
     returns = [
         (closes[i] - closes[i - 1]) / closes[i - 1]
-        for i in range(len(closes) - 20, len(closes))
+        for i in range(len(closes) - _MOMENTUM_PERIOD, len(closes))
         if closes[i - 1] != _ZERO
     ]
     n = len(returns)
@@ -45,15 +54,15 @@ def _volatility_20d(closes: list[Decimal], ticker: str) -> Decimal:
 
 def _rsi_14(closes: list[Decimal], ticker: str) -> tuple[Decimal, bool]:
     """Returns (rsi, was_clamped)."""
-    if len(closes) < 15:
+    if len(closes) < _RSI_PERIOD + 1:
         raise InsufficientDataError(
-            f"insufficient_bars:{ticker}:needed:15:got:{len(closes)}"
+            f"insufficient_bars:{ticker}:needed:{_RSI_PERIOD + 1}:got:{len(closes)}"
         )
-    changes = [closes[i] - closes[i - 1] for i in range(len(closes) - 14, len(closes))]
+    changes = [closes[i] - closes[i - 1] for i in range(len(closes) - _RSI_PERIOD, len(closes))]
     gains = [c if c > _ZERO else _ZERO for c in changes]
     losses = [-c if c < _ZERO else _ZERO for c in changes]
-    avg_gain = sum(gains) / 14
-    avg_loss = sum(losses) / 14
+    avg_gain = sum(gains) / _RSI_PERIOD
+    avg_loss = sum(losses) / _RSI_PERIOD
     if avg_loss == _ZERO:
         rsi = _HUNDRED
     else:
@@ -92,7 +101,7 @@ def _volatility_ewma(closes: list[Decimal], ticker: str) -> Decimal:
 def _scsi_from_sentiment(news_sentiment: Decimal) -> Decimal:
     """Stress Composite Signal Index. Mined from feature_engineering.py L44-48.
     MVP: article_count=1 → formula simplifies to (sentiment - 0.5) × ln(2)."""
-    return ((news_sentiment - Decimal("0.5")) * _LN2).quantize(Decimal("0.000001"))
+    return ((news_sentiment - _SCSI_BASELINE) * _LN2).quantize(Decimal("0.000001"))
 
 
 def _regime_signal(dataset: MarketDataset) -> tuple[str, list[str]]:
@@ -101,9 +110,9 @@ def _regime_signal(dataset: MarketDataset) -> tuple[str, list[str]]:
     if spy_td is None:
         return ("EXPANSION", ["regime_spy_missing"])
     spy_closes = [bar.close for bar in spy_td.ohlcv]
-    if len(spy_closes) < 200:
+    if len(spy_closes) < _SMA_REGIME_PERIOD:
         return ("EXPANSION", ["regime_spy_insufficient_bars"])
-    sma_200 = sum(spy_closes[-200:]) / Decimal("200")
+    sma_200 = sum(spy_closes[-_SMA_REGIME_PERIOD:]) / Decimal(str(_SMA_REGIME_PERIOD))
     last_close = spy_closes[-1]
     regime = "EXPANSION" if last_close >= sma_200 else "CONTRACTION"
     return (regime, [])

@@ -1,13 +1,15 @@
 import hashlib
 from decimal import Decimal
 
+from portfolio_ninja.config.params_loader import load_params
 from portfolio_ninja.domain.objects import ExperimentParams, RankedUniverse, TargetPortfolio
 
 _ONE = Decimal("1")
 
-
-_CONTRACTION_MAX_LONGS = 3
-_EXPANSION_MAX_LONGS = 5
+_p = load_params()["portfolio"]
+_CONTRACTION_MAX_LONGS: int = _p["contraction_max_longs"]
+_EXPANSION_MAX_LONGS: int = _p["expansion_max_longs"]
+del _p
 
 
 def construct_portfolio(

@@ -1,0 +1,40 @@
+# Algorithm parameters — single source of truth for all tunable constants.
+# Operational params (API timeouts, delays, pagination) are NOT here — see real_adapter.py.
+# All Decimal-compatible values are quoted strings to prevent YAML float precision loss.
+
+# ── Market State Engine ──────────────────────────────────────────────────────
+market_state:
+  momentum_period: 20             # Days for price momentum lookback (mom_20d)
+  rsi_period: 14                  # RSI calculation window (rsi_14)
+  sma_regime_period: 200          # SMA period for SPY regime detection (200-SMA)
+  ewma_span: 38                   # EWMA volatility span (alpha = 2 / (span + 1))
+  scsi_sentiment_baseline: "0.5"  # Neutral sentiment offset in SCSI formula
+
+# ── Scoring Engine ───────────────────────────────────────────────────────────
+scoring:
+  w_momentum: "0.4"        # Weight for momentum factor in technical_composite_v1
+  w_volatility: "0.3"      # Weight for volatility factor (lower vol → higher score)
+  w_rsi: "0.3"             # Weight for RSI factor
+  degenerate_score: "0.5"  # Score returned when all tickers share identical feature values
+
+# ── Portfolio Construction Engine ────────────────────────────────────────────
+portfolio:
+  expansion_max_longs: 5    # Max long positions in EXPANSION regime
+  contraction_max_longs: 3  # Max long positions in CONTRACTION regime
+
+# ── Risk Engine ──────────────────────────────────────────────────────────────
+risk:
+  concentration_limit: "0.25"  # Max weight per individual position (25%)
+
+# ── Data Plane ───────────────────────────────────────────────────────────────
+data:
+  min_bars: 60         # Min OHLCV bars required per ticker before use
+  window_days: 120     # Default data lookback window in days
+  stale_ohlcv_days: 1  # Re-fetch OHLCV data if older than N days
+  stale_news_days: 7   # Re-fetch news data if older than N days
+
+# ── Date Normalizer ──────────────────────────────────────────────────────────
+date_normalizer:
+  sample_size: 40               # Rows sampled for date-format detection
+  fault_window: 30              # ±rows around fault lines for format resolution
+  monotonicity_threshold: "0.95"  # Min monotonicity score to accept an alternate format

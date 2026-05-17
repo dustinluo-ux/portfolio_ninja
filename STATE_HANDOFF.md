@@ -1,5 +1,30 @@
 ---
 
+## Objective: Centralize Algorithm Parameters — COMPLETE (2026-05-17)
+
+### What was done:
+- Created `config/params.yaml` — single control file for all tunable algorithm constants
+- Created `src/portfolio_ninja/config/params_loader.py` — `load_params()` with default-path cache
+- Wired 4 sealed-node modules to read constants from params.yaml:
+  - `scoring_engine.py`: `_W_MOM`, `_W_VOL`, `_W_RSI`, `_HALF`
+  - `market_state_engine.py`: all indicator periods, EWMA span, SCSI baseline
+  - `portfolio_construction_engine.py`: `expansion_max_longs`, `contraction_max_longs`
+  - `risk_engine.py`: `concentration_limit`
+- Added `tests/test_params_loader.py` (10 tests)
+- ADR 0007 written; `docs/contracts/params_loader.md` added; `CONTRACT_INDEX.md` updated
+- All default values match prior hardcoded values — pipeline output is numerically identical
+
+**To verify (run these):**
+```
+conda run -n portfolio_ninja python -m pytest tests/test_params_loader.py -v
+conda run -n portfolio_ninja python -m pytest --cov=src --cov-report=term-missing -q
+conda run -n portfolio_ninja python scripts/run_pipeline.py
+```
+
+**Next step:** Phase 7 — TBD by user.
+
+---
+
 ## Objective: ScoringEngine End-to-End Audit — COMPLETE
 
 ### Session 2026-05-17 (ScoringEngine: end-to-end audit + visible score evidence):
